@@ -9,8 +9,8 @@ class EmployeeModel(Base):
     __tablename__ = 'employees'
 
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(String, unique=True, nullable=False)
-    name = Column(String, nullable=False)
+    telegram_id = Column(String(255), unique=True, nullable=False)
+    name = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     check_ins = relationship('CheckInModel', back_populates='employee')
@@ -32,9 +32,9 @@ class SalaryAdvanceModel(Base):
 
     id = Column(Integer, primary_key=True)
     employee_id = Column(Integer, ForeignKey('employees.id'))
-    amount = Column(String, nullable=False)  # Store as string to preserve precision
+    amount = Column(String(50), nullable=False)  # Store as string to preserve precision
     note = Column(Text)
-    created_by = Column(String, nullable=False)
+    created_by = Column(String(255), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     employee = relationship('EmployeeModel', back_populates='salary_advances')

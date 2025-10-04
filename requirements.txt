@@ -1,6 +1,6 @@
-python-telegram-bot==20.7
-python-dotenv==1.0.0
-sqlalchemy==2.0.23
-pymysql==1.1.0
-cryptography==41.0.7
-alembic==1.13.1
+python-telegram-bot==22.5
+python-dotenv==1.1.1
+sqlalchemy==2.0.43
+pymysql==1.1.2
+cryptography==46.0.2
+alembic==1.16.5
