@@ -3,6 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class CheckInRequest:
     employee_id: int
+    group_id: int
     latitude: float
     longitude: float
 

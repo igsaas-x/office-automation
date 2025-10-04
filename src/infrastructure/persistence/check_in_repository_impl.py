@@ -12,6 +12,7 @@ class CheckInRepository(ICheckInRepository):
     def save(self, check_in: CheckIn) -> CheckIn:
         db_check_in = CheckInModel(
             employee_id=check_in.employee_id,
+            group_id=check_in.group_id,
             latitude=check_in.location.latitude,
             longitude=check_in.location.longitude,
             timestamp=check_in.timestamp
@@ -32,6 +33,7 @@ class CheckInRepository(ICheckInRepository):
         return CheckIn(
             id=model.id,
             employee_id=model.employee_id,
+            group_id=model.group_id,
             location=Location(
                 latitude=model.latitude,
                 longitude=model.longitude

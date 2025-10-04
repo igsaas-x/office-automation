@@ -32,10 +32,15 @@ class BotApplication:
     def _get_repositories(self):
         """Get repository instances with a new session"""
         session = database.get_session()
+        from ...infrastructure.persistence.group_repository_impl import GroupRepository
+        from ...infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
+
         return (
             EmployeeRepository(session),
             CheckInRepository(session),
-            SalaryAdvanceRepository(session)
+            SalaryAdvanceRepository(session),
+            GroupRepository(session),
+            EmployeeGroupRepository(session)
         )
 
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE, employee_name: str = None):
@@ -69,7 +74,7 @@ class BotApplication:
 
         # Employee handlers
         async def start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, _ = self._get_repositories()
+            employee_repo, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
@@ -77,7 +82,7 @@ class BotApplication:
             return await employee_handler.start(update, context, self.show_menu)
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, _ = self._get_repositories()
+            employee_repo, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
@@ -86,45 +91,55 @@ class BotApplication:
 
         # Check-in handlers
         async def check_in_request_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, check_in_repo, _ = self._get_repositories()
+            from ...application.use_cases.register_group import RegisterGroupUseCase
+            from ...application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
+
+            employee_repo, check_in_repo, _, group_repo, employee_group_repo = self._get_repositories()
             check_in_handler = CheckInHandler(
-                RecordCheckInUseCase(check_in_repo, employee_repo),
-                GetEmployeeUseCase(employee_repo)
+                RecordCheckInUseCase(check_in_repo, employee_repo, group_repo),
+                GetEmployeeUseCase(employee_repo),
+                RegisterGroupUseCase(group_repo),
+                AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
             )
             return await check_in_handler.request_location(update, context)
 
         async def check_in_process_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, check_in_repo, _ = self._get_repositories()
+            from ...application.use_cases.register_group import RegisterGroupUseCase
+            from ...application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
+
+            employee_repo, check_in_repo, _, group_repo, employee_group_repo = self._get_repositories()
             check_in_handler = CheckInHandler(
-                RecordCheckInUseCase(check_in_repo, employee_repo),
-                GetEmployeeUseCase(employee_repo)
+                RecordCheckInUseCase(check_in_repo, employee_repo, group_repo),
+                GetEmployeeUseCase(employee_repo),
+                RegisterGroupUseCase(group_repo),
+                AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
             )
             return await check_in_handler.process_check_in(update, context, self.show_menu)
 
         # Salary advance handlers
         async def salary_advance_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo = self._get_repositories()
+            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
             return await salary_advance_handler.start(update, context)
 
         async def salary_advance_amount_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo = self._get_repositories()
+            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
             return await salary_advance_handler.get_amount(update, context)
 
         async def salary_advance_note_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo = self._get_repositories()
+            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
             return await salary_advance_handler.get_note(update, context)
 
         async def salary_advance_save_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo = self._get_repositories()
+            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )

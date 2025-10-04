@@ -4,7 +4,9 @@ A Telegram bot for SME management built with Domain-Driven Design (DDD) architec
 
 ## Features
 
-- **Check-In**: Employees can check in by sharing their location
+- **Group Management**: Automatically creates and manages Telegram groups for organizations
+- **Check-In**: Employees can check in from group chats by sharing their location
+- **Employee-Group Association**: Automatically adds employees to groups when they check in
 - **Salary Advance**: Admins can record salary advance payments to employees
 
 ## Tech Stack
@@ -117,18 +119,36 @@ The bot will start and display "Bot is running..."
 
 ## Usage
 
+### Setup
+
+1. **Create a Telegram group** for your organization
+2. **Add the bot** to the group as an admin
+3. **Add employees** to the group
+
 ### For Employees
 
-1. Start the bot with `/start`
-2. Register by entering your name
-3. Click "📍 Check In" to share your location
+1. **Register** (one-time):
+   - Start a private chat with the bot
+   - Send `/start`
+   - Enter your full name
+
+2. **Check In** (daily):
+   - Go to your organization's group chat
+   - Type any message (e.g., "check in")
+   - Click "📍 Check In" when prompted
+   - Share your location
+   - The bot will automatically:
+     - Register the group (if first time)
+     - Add you to the group members
+     - Record your check-in with location and timestamp
 
 ### For Admins
 
-1. Click "💰 Record Salary Advance"
-2. Enter employee name
-3. Enter amount
-4. Enter optional note
+1. Start a private chat with the bot
+2. Click "💰 Record Salary Advance"
+3. Enter employee name
+4. Enter amount
+5. Enter optional note or type 'skip'
 
 ## Database Migrations
 
