@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 @dataclass
@@ -15,5 +15,5 @@ class Employee:
             id=None,
             telegram_id=telegram_id,
             name=name,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )

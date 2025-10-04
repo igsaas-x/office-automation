@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from ..value_objects.money import Money
 
@@ -20,5 +20,5 @@ class SalaryAdvance:
             amount=amount,
             note=note,
             created_by=created_by,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
         )

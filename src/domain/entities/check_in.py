@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from ..value_objects.location import Location
 
@@ -18,5 +18,5 @@ class CheckIn:
             employee_id=employee_id,
             group_id=group_id,
             location=location,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc).replace(tzinfo=None)
         )
