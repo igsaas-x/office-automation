@@ -110,7 +110,7 @@ class CheckInHandler:
         employee = self.get_employee_use_case.execute_by_telegram_id(str(user.id))
 
         if not employee:
-            await update.message.reply_text("Please register first using /start in a private chat with the bot.")
+            await update.message.reply_text("Please register first using /register")
             return ConversationHandler.END
 
         try:
