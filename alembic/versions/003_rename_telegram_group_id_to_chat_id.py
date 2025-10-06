@@ -20,10 +20,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Rename column in groups table (MySQL requires existing_type)
-    op.alter_column('groups', 'telegram_group_id',
-                    new_column_name='chat_id',
-                    existing_type=sa.String(255),
-                    existing_nullable=False)
+    # Check if the column exists before renaming
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('groups')]
+
+    if 'telegram_group_id' in columns:
+        op.alter_column('groups', 'telegram_group_id',
+                        new_column_name='chat_id',
+                        existing_type=sa.String(255),
+                        existing_nullable=False)
 
 
 def downgrade() -> None:
