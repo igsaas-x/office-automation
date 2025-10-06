@@ -58,7 +58,7 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             alembic upgrade head
-            sed -e "s|/root/office-automation|${REMOTE_APP_DIR}|g" deploy/office-automation.service | sudo tee /etc/systemd/system/office-automation.service > /dev/null
+            sed -e "s|/root/office-automation|${REMOTE_APP_DIR}|g" -e 's/^[[:space:]]*//' deploy/office-automation.service | sudo tee /etc/systemd/system/office-automation.service > /dev/null
             sudo systemctl daemon-reload
             sudo systemctl enable office-automation.service
             sudo systemctl restart office-automation.service
