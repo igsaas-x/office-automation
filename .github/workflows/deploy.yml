@@ -10,18 +10,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    env:
-      REMOTE_APP_DIR: ${{ secrets.REMOTE_APP_DIR }}
-      DEPLOY_BRANCH: main
-      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      SERVICE_USER: root
-      SERVICE_GROUP: root
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,32 +21,45 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT || '22' }}
-          envs: REMOTE_APP_DIR,DEPLOY_BRANCH,BOT_TOKEN,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,SERVICE_USER,SERVICE_GROUP
           script: |
-            set -euo pipefail
-            cd "$REMOTE_APP_DIR"
-            git fetch origin "$DEPLOY_BRANCH"
-            git checkout "$DEPLOY_BRANCH"
-            git pull --ff-only origin "$DEPLOY_BRANCH"
-            {
-              echo "BOT_TOKEN=${BOT_TOKEN}"
-              echo "DB_HOST=${DB_HOST}"
-              echo "DB_PORT=${DB_PORT}"
-              echo "DB_USER=${DB_USER}"
-              echo "DB_PASSWORD=${DB_PASSWORD}"
-              echo "DB_NAME=${DB_NAME}"
-            } > .env
-            chmod 600 .env
-            : "${SERVICE_USER:?SERVICE_USER secret not set}"
-            SERVICE_GROUP_FALLBACK=${SERVICE_GROUP:-$SERVICE_USER}
-            if [ ! -d .venv ]; then
-              python3 -m venv .venv
+            cd ${{ secrets.REMOTE_APP_DIR }}
+            git restore .env
+            git switch main
+            git pull origin main
+
+            # Create virtual environment if it doesn't exist
+            if [ ! -d "${{ secrets.REMOTE_APP_DIR }}/.venv" ]; then
+              echo "Creating virtual environment..."
+              python3 -m venv ${{ secrets.REMOTE_APP_DIR }}/.venv
             fi
-            . .venv/bin/activate
-            pip install --upgrade pip
+
+            echo "Activating virtual environment..."
+            source ${{ secrets.REMOTE_APP_DIR }}/.venv/bin/activate
+
+            # Ensure pip is up to date
+            python3 -m pip install --upgrade pip
+
+            # Create .env file with secrets from GitHub
+            cat > .env << EOF
+            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            EOF
+
             pip install -r requirements.txt
             alembic upgrade head
-            sed -e "s|/root/office-automation|${REMOTE_APP_DIR}|g" -e 's/^[[:space:]]*//' deploy/office-automation.service | sudo tee /etc/systemd/system/office-automation.service > /dev/null
+
+            # Deploy service file
+            sudo cp deploy/office-automation.service /etc/systemd/system/
             sudo systemctl daemon-reload
-            sudo systemctl enable office-automation.service
-            sudo systemctl restart office-automation.service
+
+            # Stop any existing service
+            sudo systemctl stop office-automation || true
+
+            # Start service
+            sudo systemctl start office-automation
+            sudo systemctl enable office-automation
+            echo "=== DEPLOYMENT COMPLETED SUCCESSFULLY: $(date) ==="
