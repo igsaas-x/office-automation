@@ -58,7 +58,7 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             alembic upgrade head
-            cat <<'SYSTEMD_EOF' | sudo tee /etc/systemd/system/office-automation.service > /dev/null
+            cat <<SYSTEMD_EOF | sudo tee /etc/systemd/system/office-automation.service > /dev/null
             [Unit]
             Description=Office Automation Telegram Bot
             After=network-online.target
