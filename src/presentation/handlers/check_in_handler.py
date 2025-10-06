@@ -40,25 +40,28 @@ class CheckInHandler:
                 'title': chat.title,
                 'username': chat.username
             }
+            context.user_data['pending_checkin_command'] = True
 
             bot_username = context.bot.username
-            deep_link = f"https://t.me/{bot_username}?checkin" if bot_username else "https://t.me"
+            deep_link = f"https://t.me/{bot_username}?start=checkin" if bot_username else "https://t.me"
 
-            keyboard = [[InlineKeyboardButton("Go to Checking", url=deep_link)]]
+            keyboard = [[InlineKeyboardButton("Go to Checkin", url=deep_link)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if update.callback_query:
                 await update.callback_query.edit_message_text(
-                    "I can only request your location in a private chat."
-                    "\nTap the button below to open our private chat and finish your check-in.",
+                    "Tap the button below to open our private chat and finish your check-in.",
                     reply_markup=reply_markup
                 )
+                # Store message ID to remove button later
+                context.user_data['check_in_message_id'] = update.callback_query.message.message_id
             else:
-                await message.reply_text(
-                    "I can only request your location in a private chat."
-                    "\nTap the button below to open our private chat and finish your check-in.",
+                sent_msg = await message.reply_text(
+                    "Tap the button below to open our private chat and finish your check-in.",
                     reply_markup=reply_markup
                 )
+                # Store message ID to remove button later
+                context.user_data['check_in_message_id'] = sent_msg.message_id
             return ConversationHandler.END
 
         # In private chat we must already know which group to record the check-in for
@@ -133,24 +136,27 @@ class CheckInHandler:
             )
             response = self.record_check_in_use_case.execute(request)
 
+            group_name = target_chat_title or f"Group {target_chat_id}"
             await update.message.reply_text(
                 f"✅ {response.message}\n"
                 f"Employee: {employee.name}\n"
+                f"Group: {group_name}\n"
                 f"Time: {response.timestamp}\n"
                 f"Location: {response.location}"
             )
             # Share a link back to the originating group in the private chat
             if chat.type not in ['group', 'supergroup']:
+                group_name = target_chat_title or "your group"
                 if target_chat_username:
                     group_link = f"https://t.me/{target_chat_username}"
+                    await update.message.reply_text(
+                        f"🔁 Back to {group_name}: {group_link}",
+                        disable_web_page_preview=True
+                    )
                 else:
-                    group_link = f"https://t.me/+Y873JJixH-U3NzQ9"
-
-                group_name = target_chat_title or "your group"
-                await update.message.reply_text(
-                    f"🔁 Back to {group_name}: {group_link}",
-                    disable_web_page_preview=True
-                )
+                    await update.message.reply_text(
+                        f"✅ Check-in recorded for {group_name}"
+                    )
 
             # Notify the group about the successful check-in
             group_message = (
@@ -160,6 +166,19 @@ class CheckInHandler:
             )
             try:
                 await context.bot.send_message(chat_id=target_chat_id, text=group_message)
+
+                # Remove the "Go to Checkin" button from the group message
+                check_in_message_id = context.user_data.get('check_in_message_id')
+                if check_in_message_id:
+                    try:
+                        await context.bot.edit_message_reply_markup(
+                            chat_id=target_chat_id,
+                            message_id=check_in_message_id,
+                            reply_markup=None
+                        )
+                    except TelegramError:
+                        # Ignore if message can't be edited (e.g., too old or deleted)
+                        pass
             except TelegramError as notify_error:
                 if chat.type not in ['group', 'supergroup']:
                     await update.message.reply_text(
@@ -168,6 +187,7 @@ class CheckInHandler:
                     )
             finally:
                 context.user_data.pop('check_in_group', None)
+                context.user_data.pop('check_in_message_id', None)
 
             if chat.type not in ['group', 'supergroup']:
                 await show_menu_callback(update, context, employee.name)

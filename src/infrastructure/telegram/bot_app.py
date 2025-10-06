@@ -85,7 +85,11 @@ class BotApplication:
                 await query.edit_message_text(menu_text, reply_markup=reply_markup)
             except TelegramError as error:
                 if "message is not modified" in str(error).lower():
-                    await query.edit_message_reply_markup(reply_markup=reply_markup)
+                    try:
+                        await query.edit_message_reply_markup(reply_markup=reply_markup)
+                    except TelegramError as markup_error:
+                        if "message is not modified" not in str(markup_error).lower():
+                            raise
                 else:
                     raise
 
@@ -108,13 +112,18 @@ class BotApplication:
             except TelegramError as error:
                 error_text = str(error).lower()
                 if "message is not modified" in error_text:
-                    await context.bot.edit_message_reply_markup(
-                        chat_id=chat_id,
-                        message_id=menu_message_id,
-                        reply_markup=reply_markup
-                    )
-                    chat_data['menu_message_id'] = menu_message_id
-                    return
+                    try:
+                        await context.bot.edit_message_reply_markup(
+                            chat_id=chat_id,
+                            message_id=menu_message_id,
+                            reply_markup=reply_markup
+                        )
+                        chat_data['menu_message_id'] = menu_message_id
+                        return
+                    except TelegramError as markup_error:
+                        if "message is not modified" in str(markup_error).lower():
+                            return
+                        raise
                 # If the original menu message is gone, fall back to sending a new one
                 chat_data.pop('menu_message_id', None)
 
@@ -132,22 +141,86 @@ class BotApplication:
 
         # Employee handlers
         async def start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            chat = update.effective_chat
+            message = update.effective_message
+
+            # /start only works in private chats
+            if chat.type != 'private':
+                if message:
+                    await message.reply_text(
+                        "Please use /start in a private chat with the bot.\n"
+                        "In groups, use /menu instead."
+                    )
+                return ConversationHandler.END
+
             employee_repo, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
             )
-            result = await employee_handler.start(update, context, self.show_menu)
 
-            if (
-                result == ConversationHandler.END
-                and context.args
+            start_mentions_checkin = False
+            if message and message.text:
+                lowered = message.text.lower()
+                start_mentions_checkin = lowered.startswith('/start') and 'checkin' in lowered
+
+            pending_from_args = (
+                context.args
                 and len(context.args) > 0
                 and context.args[0].lower() == "checkin"
-            ):
+            )
+
+            if start_mentions_checkin or pending_from_args:
+                context.user_data['pending_checkin_command'] = True
+
+            # Create a wrapper for show_menu that skips if checkin is pending
+            async def show_menu_or_skip(update, context, employee_name=None):
+                if context.user_data.get('pending_checkin_command'):
+                    return
+                await self.show_menu(update, context, employee_name)
+
+            result = await employee_handler.start(update, context, show_menu_or_skip)
+
+            pending_from_flag = context.user_data.get('pending_checkin_command', False)
+
+            if result == ConversationHandler.END and (pending_from_args or pending_from_flag):
+                context.user_data.pop('pending_checkin_command', None)
                 await checkin_command(update, context)
 
             return result
+
+        async def menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            chat = update.effective_chat
+            message = update.effective_message
+            user = update.effective_user
+
+            # /menu only works in group chats
+            if chat.type == 'private':
+                if message:
+                    await message.reply_text(
+                        "In private chat, please use /start instead of /menu."
+                    )
+                return
+
+            # Check if employee is registered
+            employee_repo, _, _, _, _ = self._get_repositories()
+            employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(str(user.id))
+
+            if not employee:
+                await message.reply_text(
+                    "Please register first by starting a private chat with the bot and using /start."
+                )
+                return
+
+            # Show menu in group
+            keyboard = [
+                [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
+            ]
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            menu_text = f"Hello {employee.name}!\nPlease select an option:"
+
+            await message.reply_text(menu_text, reply_markup=reply_markup)
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             employee_repo, _, _, _, _ = self._get_repositories()
@@ -155,7 +228,18 @@ class BotApplication:
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
             )
-            return await employee_handler.register(update, context, self.show_menu)
+
+            message = update.effective_message
+            if message and message.text and 'checkin' in message.text.lower():
+                context.user_data['pending_checkin_command'] = True
+
+            result = await employee_handler.register(update, context, self.show_menu)
+
+            if context.user_data.get('pending_checkin_command'):
+                context.user_data.pop('pending_checkin_command', None)
+                await checkin_command(update, context)
+
+            return result
 
         async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
@@ -177,7 +261,14 @@ class BotApplication:
                 await message.reply_text("Please register first using /start in a private chat.")
                 return
 
-            await self.show_menu(update, context, employee.name)
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📍 Start Check-In", callback_data="CHECK_IN")]
+            ])
+
+            await message.reply_text(
+                "Ready to check in? Tap the button below to share your location.",
+                reply_markup=keyboard
+            )
 
         # Check-in handlers
         async def check_in_request_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -208,7 +299,12 @@ class BotApplication:
                 RegisterGroupUseCase(group_repo),
                 AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
             )
-            return await check_in_handler.process_check_in(update, context, self.show_menu)
+
+            # Don't show menu in private chat after check-in
+            async def skip_menu(update, context, employee_name=None):
+                pass
+
+            return await check_in_handler.process_check_in(update, context, skip_menu)
 
         async def request_advance_placeholder(update: Update, context: ContextTypes.DEFAULT_TYPE):
             query = update.callback_query
@@ -296,6 +392,7 @@ class BotApplication:
         )
 
         # Add handlers
+        self.app.add_handler(CommandHandler("menu", menu_wrapper))
         self.app.add_handler(CommandHandler("checkin", checkin_command))
         self.app.add_handler(registration_conv)
         self.app.add_handler(check_in_conv)
