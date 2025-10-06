@@ -1,5 +1,14 @@
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ConversationHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes,
+)
+from telegram.error import TelegramError
 from ...infrastructure.config.settings import settings
 from ...infrastructure.persistence.database import database
 from ...infrastructure.persistence.employee_repository_impl import EmployeeRepository
@@ -48,20 +57,69 @@ class BotApplication:
         user = update.effective_user
 
         keyboard = [
-            [KeyboardButton("📍 Check In")],
+            [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
+            [InlineKeyboardButton("📝 Request Advance", callback_data="REQUEST_ADVANCE")],
         ]
 
-        # Add admin options
         if user.id in settings.ADMIN_IDS:
-            keyboard.append([KeyboardButton("💰 Record Salary Advance")])
+            keyboard.append([InlineKeyboardButton("💰 Record Salary Advance", callback_data="SALARY_ADVANCE")])
 
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
+        message = update.effective_message
         name = employee_name or user.first_name
-        await update.message.reply_text(
-            f"Welcome back {name}!\nPlease select an option:",
-            reply_markup=reply_markup
+        menu_text = (
+            f"Welcome back {name}!\nPlease select an option:\n"
+            "1. 📍 Check In\n"
+            "2. 📝 Request Advance"
         )
+
+        if user.id in settings.ADMIN_IDS:
+            menu_text += "\n3. 💰 Record Salary Advance"
+
+        chat_data = context.chat_data
+        query = update.callback_query
+
+        if query:
+            try:
+                await query.edit_message_text(menu_text, reply_markup=reply_markup)
+            except TelegramError as error:
+                if "message is not modified" in str(error).lower():
+                    await query.edit_message_reply_markup(reply_markup=reply_markup)
+                else:
+                    raise
+
+            chat_data['menu_message_id'] = query.message.message_id
+            return
+
+        menu_message_id = chat_data.get('menu_message_id')
+        chat_id = message.chat_id
+
+        if menu_message_id:
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=menu_message_id,
+                    text=menu_text,
+                    reply_markup=reply_markup
+                )
+                chat_data['menu_message_id'] = menu_message_id
+                return
+            except TelegramError as error:
+                error_text = str(error).lower()
+                if "message is not modified" in error_text:
+                    await context.bot.edit_message_reply_markup(
+                        chat_id=chat_id,
+                        message_id=menu_message_id,
+                        reply_markup=reply_markup
+                    )
+                    chat_data['menu_message_id'] = menu_message_id
+                    return
+                # If the original menu message is gone, fall back to sending a new one
+                chat_data.pop('menu_message_id', None)
+
+        sent_message = await message.reply_text(menu_text, reply_markup=reply_markup)
+        chat_data['menu_message_id'] = sent_message.message_id
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel conversation"""
@@ -79,7 +137,17 @@ class BotApplication:
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
             )
-            return await employee_handler.start(update, context, self.show_menu)
+            result = await employee_handler.start(update, context, self.show_menu)
+
+            if (
+                result == ConversationHandler.END
+                and context.args
+                and len(context.args) > 0
+                and context.args[0].lower() == "checkin"
+            ):
+                await checkin_command(update, context)
+
+            return result
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             employee_repo, _, _, _, _ = self._get_repositories()
@@ -88,6 +156,28 @@ class BotApplication:
                 GetEmployeeUseCase(employee_repo)
             )
             return await employee_handler.register(update, context, self.show_menu)
+
+        async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            chat = update.effective_chat
+            message = update.effective_message
+
+            if chat.type != 'private':
+                if message:
+                    await message.reply_text(
+                        "Please use /checkin in a private chat with the bot."
+                    )
+                return
+
+            employee_repo, _, _, _, _ = self._get_repositories()
+            employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(
+                str(update.effective_user.id)
+            )
+
+            if not employee:
+                await message.reply_text("Please register first using /start in a private chat.")
+                return
+
+            await self.show_menu(update, context, employee.name)
 
         # Check-in handlers
         async def check_in_request_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,6 +191,10 @@ class BotApplication:
                 RegisterGroupUseCase(group_repo),
                 AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
             )
+            if update.callback_query:
+                await update.callback_query.answer()
+                await update.callback_query.edit_message_reply_markup(reply_markup=None)
+                context.chat_data['menu_message_id'] = update.callback_query.message.message_id
             return await check_in_handler.request_location(update, context)
 
         async def check_in_process_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,12 +210,27 @@ class BotApplication:
             )
             return await check_in_handler.process_check_in(update, context, self.show_menu)
 
+        async def request_advance_placeholder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            query = update.callback_query
+            if query:
+                await query.answer()
+                await query.edit_message_reply_markup(reply_markup=None)
+                context.chat_data['menu_message_id'] = query.message.message_id
+
+            message = update.effective_message
+            await message.reply_text("The request advance feature is coming soon.")
+            await self.show_menu(update, context)
+
         # Salary advance handlers
         async def salary_advance_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
+            if update.callback_query:
+                await update.callback_query.answer()
+                await update.callback_query.edit_message_reply_markup(reply_markup=None)
+                context.chat_data['menu_message_id'] = update.callback_query.message.message_id
             return await salary_advance_handler.start(update, context)
 
         async def salary_advance_amount_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,16 +265,28 @@ class BotApplication:
 
         # Check-in conversation handler
         check_in_conv = ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^📍 Check In$"), check_in_request_wrapper)],
+            entry_points=[
+                CallbackQueryHandler(check_in_request_wrapper, pattern="^CHECK_IN$"),
+                MessageHandler(filters.Regex("^📍 Check In$"), check_in_request_wrapper),
+            ],
             states={
                 WAITING_LOCATION: [MessageHandler(filters.LOCATION, check_in_process_wrapper)],
             },
             fallbacks=[CommandHandler("cancel", self.cancel)],
         )
 
+        # Placeholder handler for request advance button
+        request_advance_handler = MessageHandler(
+            filters.Regex("^📝 Request Advance$"),
+            request_advance_placeholder
+        )
+
         # Salary advance conversation handler
         salary_advance_conv = ConversationHandler(
-            entry_points=[MessageHandler(filters.Regex("^💰 Record Salary Advance$"), salary_advance_start_wrapper)],
+            entry_points=[
+                CallbackQueryHandler(salary_advance_start_wrapper, pattern="^SALARY_ADVANCE$"),
+                MessageHandler(filters.Regex("^💰 Record Salary Advance$"), salary_advance_start_wrapper),
+            ],
             states={
                 WAITING_EMPLOYEE_NAME_ADV: [MessageHandler(filters.TEXT & ~filters.COMMAND, salary_advance_amount_wrapper)],
                 WAITING_ADVANCE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, salary_advance_note_wrapper)],
@@ -175,8 +296,11 @@ class BotApplication:
         )
 
         # Add handlers
+        self.app.add_handler(CommandHandler("checkin", checkin_command))
         self.app.add_handler(registration_conv)
         self.app.add_handler(check_in_conv)
+        self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
+        self.app.add_handler(request_advance_handler)
         self.app.add_handler(salary_advance_conv)
 
     def run(self):

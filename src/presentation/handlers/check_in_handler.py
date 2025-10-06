@@ -1,5 +1,12 @@
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
+from telegram import (
+    Update,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
 from telegram.ext import ContextTypes, ConversationHandler
+from telegram.error import TelegramError
 from ...application.use_cases.record_check_in import RecordCheckInUseCase
 from ...application.use_cases.get_employee import GetEmployeeUseCase
 from ...application.use_cases.register_group import RegisterGroupUseCase
@@ -24,30 +31,40 @@ class CheckInHandler:
     async def request_location(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Request location for check-in"""
         chat = update.effective_chat
+        message = update.effective_message
 
         # If the user taps the button inside a group, store the group and redirect to private chat
         if chat.type in ['group', 'supergroup']:
             context.user_data['check_in_group'] = {
                 'chat_id': chat.id,
-                'title': chat.title
+                'title': chat.title,
+                'username': chat.username
             }
 
             bot_username = context.bot.username
-            deep_link = f"https://t.me/{bot_username}?start=checkin" if bot_username else "https://t.me"
+            deep_link = f"https://t.me/{bot_username}?checkin" if bot_username else "https://t.me"
 
-            await update.message.reply_text(
-                "I can only request your location in a private chat."
-                "\nTap this link to continue: "
-                f"{deep_link}"
-                "\nOnce there, press '📍 Check In' again to finish your check-in.",
-                disable_web_page_preview=True
-            )
+            keyboard = [[InlineKeyboardButton("Go to Checking", url=deep_link)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            if update.callback_query:
+                await update.callback_query.edit_message_text(
+                    "I can only request your location in a private chat."
+                    "\nTap the button below to open our private chat and finish your check-in.",
+                    reply_markup=reply_markup
+                )
+            else:
+                await message.reply_text(
+                    "I can only request your location in a private chat."
+                    "\nTap the button below to open our private chat and finish your check-in.",
+                    reply_markup=reply_markup
+                )
             return ConversationHandler.END
 
         # In private chat we must already know which group to record the check-in for
         group_context = context.user_data.get('check_in_group')
         if not group_context:
-            await update.message.reply_text(
+            await message.reply_text(
                 "I don't know which group to check you into."
                 "\nGo back to the group chat and press '📍 Check In' there first."
             )
@@ -56,7 +73,7 @@ class CheckInHandler:
         keyboard = [[KeyboardButton("📍 Share Location", request_location=True)]]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
-        await update.message.reply_text(
+        await message.reply_text(
             "Please share your location to check in:",
             reply_markup=reply_markup
         )
@@ -72,6 +89,7 @@ class CheckInHandler:
         if chat.type in ['group', 'supergroup']:
             target_chat_id = chat.id
             target_chat_title = chat.title
+            target_chat_username = getattr(chat, 'username', None)
         else:
             group_context = context.user_data.get('check_in_group')
             if not group_context:
@@ -83,6 +101,7 @@ class CheckInHandler:
 
             target_chat_id = group_context['chat_id']
             target_chat_title = group_context.get('title')
+            target_chat_username = group_context.get('username')
 
         # Get employee
         employee = self.get_employee_use_case.execute_by_telegram_id(str(user.id))
@@ -120,10 +139,38 @@ class CheckInHandler:
                 f"Time: {response.timestamp}\n"
                 f"Location: {response.location}"
             )
-            # Clear stored group context once the check-in succeeds
-            context.user_data.pop('check_in_group', None)
+            # Share a link back to the originating group in the private chat
+            if chat.type not in ['group', 'supergroup']:
+                if target_chat_username:
+                    group_link = f"https://t.me/{target_chat_username}"
+                else:
+                    group_link = f"https://t.me/+Y873JJixH-U3NzQ9"
 
-            await show_menu_callback(update, context, employee.name)
+                group_name = target_chat_title or "your group"
+                await update.message.reply_text(
+                    f"🔁 Back to {group_name}: {group_link}",
+                    disable_web_page_preview=True
+                )
+
+            # Notify the group about the successful check-in
+            group_message = (
+                f"✅ {employee.name} checked in successfully.\n"
+                f"Time: {response.timestamp}\n"
+                f"Location: {response.location}"
+            )
+            try:
+                await context.bot.send_message(chat_id=target_chat_id, text=group_message)
+            except TelegramError as notify_error:
+                if chat.type not in ['group', 'supergroup']:
+                    await update.message.reply_text(
+                        "Check-in recorded, but I couldn't notify the group: "
+                        f"{notify_error.message if hasattr(notify_error, 'message') else str(notify_error)}"
+                    )
+            finally:
+                context.user_data.pop('check_in_group', None)
+
+            if chat.type not in ['group', 'supergroup']:
+                await show_menu_callback(update, context, employee.name)
         except Exception as e:
             await update.message.reply_text(f"Error: {str(e)}")
 

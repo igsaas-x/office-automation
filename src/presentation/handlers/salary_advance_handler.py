@@ -18,12 +18,13 @@ class SalaryAdvanceHandler:
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start salary advance recording (admin only)"""
         user = update.effective_user
+        message = update.effective_message
 
         if user.id not in settings.ADMIN_IDS:
-            await update.message.reply_text("You don't have permission to use this feature.")
+            await message.reply_text("You don't have permission to use this feature.")
             return ConversationHandler.END
 
-        await update.message.reply_text("Please enter the employee's name:")
+        await message.reply_text("Please enter the employee's name:")
         return WAITING_EMPLOYEE_NAME_ADV
 
     async def get_amount(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,10 +74,10 @@ class SalaryAdvanceHandler:
         except ValueError as e:
             await update.message.reply_text(f"Error: {str(e)}")
 
-        # Clear user data
-        context.user_data.clear()
+        # Capture any stored employee name before clearing the context
+        employee_name = context.user_data.get('employee_name')
 
-        # Get employee name from context
-        employee = context.user_data.get('employee_name', 'Admin')
-        await show_menu_callback(update, context, employee)
+        # Clear user data and return to the menu
+        context.user_data.clear()
+        await show_menu_callback(update, context, employee_name)
         return ConversationHandler.END

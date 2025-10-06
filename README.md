@@ -116,6 +116,7 @@ The bot will start and display "Bot is running..."
 
 - `/start` - Register or show main menu
 - `/cancel` - Cancel current operation
+- `/checkin` - Open the check-in options in a private chat
 
 ## Usage
 
