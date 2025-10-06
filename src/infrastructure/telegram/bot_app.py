@@ -144,15 +144,6 @@ class BotApplication:
             chat = update.effective_chat
             message = update.effective_message
 
-            # /start only works in private chats
-            if chat.type != 'private':
-                if message:
-                    await message.reply_text(
-                        "Please use /start in a private chat with the bot.\n"
-                        "In groups, use /menu instead."
-                    )
-                return ConversationHandler.END
-
             employee_repo, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
@@ -173,9 +164,11 @@ class BotApplication:
             if start_mentions_checkin or pending_from_args:
                 context.user_data['pending_checkin_command'] = True
 
-            # Create a wrapper for show_menu that skips if checkin is pending
+            # Create a wrapper for show_menu that skips if checkin is pending or in groups
             async def show_menu_or_skip(update, context, employee_name=None):
                 if context.user_data.get('pending_checkin_command'):
+                    return
+                if chat.type in ['group', 'supergroup']:
                     return
                 await self.show_menu(update, context, employee_name)
 
@@ -230,16 +223,37 @@ class BotApplication:
             )
 
             message = update.effective_message
+            chat = update.effective_chat
+
             if message and message.text and 'checkin' in message.text.lower():
                 context.user_data['pending_checkin_command'] = True
 
-            result = await employee_handler.register(update, context, self.show_menu)
+            # In groups, don't show menu
+            if chat.type in ['group', 'supergroup']:
+                async def skip_menu(update, context, employee_name=None):
+                    pass
+                result = await employee_handler.register(update, context, skip_menu)
+            else:
+                result = await employee_handler.register(update, context, self.show_menu)
 
             if context.user_data.get('pending_checkin_command'):
                 context.user_data.pop('pending_checkin_command', None)
                 await checkin_command(update, context)
 
             return result
+
+        async def register_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            employee_repo, _, _, _, _ = self._get_repositories()
+            employee_handler = EmployeeHandler(
+                RegisterEmployeeUseCase(employee_repo),
+                GetEmployeeUseCase(employee_repo)
+            )
+
+            # In groups, don't show menu after registration
+            async def skip_menu(update, context, employee_name=None):
+                pass
+
+            return await employee_handler.start(update, context, skip_menu)
 
         async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
@@ -352,7 +366,10 @@ class BotApplication:
 
         # Registration conversation handler
         registration_conv = ConversationHandler(
-            entry_points=[CommandHandler("start", start_wrapper)],
+            entry_points=[
+                CommandHandler("start", start_wrapper),
+                CommandHandler("register", register_command_wrapper)
+            ],
             states={
                 WAITING_EMPLOYEE_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, register_wrapper)],
             },
