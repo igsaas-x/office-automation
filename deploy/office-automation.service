@@ -1,0 +1,17 @@
+[Unit]
+Description=Office Automation Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/office-automation
+EnvironmentFile=/root/office-automation/.env
+ExecStart=/root/office-automation/.venv/bin/python3 /root/office-automation/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

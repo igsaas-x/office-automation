@@ -23,10 +23,34 @@ class CheckInHandler:
 
     async def request_location(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Request location for check-in"""
-        # Check if message is from a group
         chat = update.effective_chat
-        if chat.type not in ['group', 'supergroup']:
-            await update.message.reply_text("Check-in must be done in a group chat.")
+
+        # If the user taps the button inside a group, store the group and redirect to private chat
+        if chat.type in ['group', 'supergroup']:
+            context.user_data['check_in_group'] = {
+                'chat_id': chat.id,
+                'title': chat.title
+            }
+
+            bot_username = context.bot.username
+            deep_link = f"https://t.me/{bot_username}?start=checkin" if bot_username else "https://t.me"
+
+            await update.message.reply_text(
+                "I can only request your location in a private chat."
+                "\nTap this link to continue: "
+                f"{deep_link}"
+                "\nOnce there, press '📍 Check In' again to finish your check-in.",
+                disable_web_page_preview=True
+            )
+            return ConversationHandler.END
+
+        # In private chat we must already know which group to record the check-in for
+        group_context = context.user_data.get('check_in_group')
+        if not group_context:
+            await update.message.reply_text(
+                "I don't know which group to check you into."
+                "\nGo back to the group chat and press '📍 Check In' there first."
+            )
             return ConversationHandler.END
 
         keyboard = [[KeyboardButton("📍 Share Location", request_location=True)]]
@@ -44,10 +68,21 @@ class CheckInHandler:
         chat = update.effective_chat
         location = update.message.location
 
-        # Verify it's a group
-        if chat.type not in ['group', 'supergroup']:
-            await update.message.reply_text("Check-in must be done in a group chat.")
-            return ConversationHandler.END
+        # Identify the correct group to record the check-in against
+        if chat.type in ['group', 'supergroup']:
+            target_chat_id = chat.id
+            target_chat_title = chat.title
+        else:
+            group_context = context.user_data.get('check_in_group')
+            if not group_context:
+                await update.message.reply_text(
+                    "I don't know which group to check you into."
+                    "\nGo back to the group chat and press '📍 Check In' there first."
+                )
+                return ConversationHandler.END
+
+            target_chat_id = group_context['chat_id']
+            target_chat_title = group_context.get('title')
 
         # Get employee
         employee = self.get_employee_use_case.execute_by_telegram_id(str(user.id))
@@ -59,8 +94,8 @@ class CheckInHandler:
         try:
             # Register or get group
             group = self.register_group_use_case.execute(
-                chat_id=str(chat.id),
-                name=chat.title or f"Group {chat.id}"
+                chat_id=str(target_chat_id),
+                name=target_chat_title or f"Group {target_chat_id}"
             )
 
             # Add employee to group if not already added
@@ -85,6 +120,10 @@ class CheckInHandler:
                 f"Time: {response.timestamp}\n"
                 f"Location: {response.location}"
             )
+            # Clear stored group context once the check-in succeeds
+            context.user_data.pop('check_in_group', None)
+
+            await show_menu_callback(update, context, employee.name)
         except Exception as e:
             await update.message.reply_text(f"Error: {str(e)}")
 

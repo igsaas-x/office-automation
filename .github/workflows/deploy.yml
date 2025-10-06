@@ -1,0 +1,82 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      REMOTE_APP_DIR: ${{ secrets.REMOTE_APP_DIR }}
+      DEPLOY_BRANCH: main
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      SERVICE_USER: ${{ secrets.SERVICE_USER }}
+      SERVICE_GROUP: ${{ secrets.SERVICE_GROUP }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          envs: BOT_TOKEN,DB_HOST,DB_PORT,DB_USER,DB_PASSWORD,DB_NAME,SERVICE_USER,SERVICE_GROUP
+          script: |
+            set -euo pipefail
+            cd "$REMOTE_APP_DIR"
+            git fetch origin "$DEPLOY_BRANCH"
+            git checkout "$DEPLOY_BRANCH"
+            git pull --ff-only origin "$DEPLOY_BRANCH"
+            cat <<EOF > .env
+            BOT_TOKEN=$BOT_TOKEN
+            DB_HOST=$DB_HOST
+            DB_PORT=$DB_PORT
+            DB_USER=$DB_USER
+            DB_PASSWORD=$DB_PASSWORD
+            DB_NAME=$DB_NAME
+            EOF
+            chmod 600 .env
+            : "${SERVICE_USER:?SERVICE_USER secret not set}"
+            SERVICE_GROUP_FALLBACK=${SERVICE_GROUP:-$SERVICE_USER}
+            if [ ! -d .venv ]; then
+              python3 -m venv .venv
+            fi
+            . .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            alembic upgrade head
+            sudo tee /etc/systemd/system/office-automation.service > /dev/null <<EOF
+[Unit]
+Description=Office Automation Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${SERVICE_USER}
+Group=${SERVICE_GROUP_FALLBACK}
+WorkingDirectory=${REMOTE_APP_DIR}
+EnvironmentFile=${REMOTE_APP_DIR}/.env
+ExecStart=${REMOTE_APP_DIR}/.venv/bin/python ${REMOTE_APP_DIR}/main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            sudo systemctl daemon-reload
+            sudo systemctl enable office-automation.service
+            sudo systemctl restart office-automation.service
