@@ -58,25 +58,25 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             alembic upgrade head
-            sudo tee /etc/systemd/system/office-automation.service > /dev/null <<'SYSTEMD_EOF'
-[Unit]
-Description=Office Automation Telegram Bot
-After=network-online.target
-Wants=network-online.target
+            cat <<'SYSTEMD_EOF' | sudo tee /etc/systemd/system/office-automation.service > /dev/null
+            [Unit]
+            Description=Office Automation Telegram Bot
+            After=network-online.target
+            Wants=network-online.target
 
-[Service]
-Type=simple
-User=${SERVICE_USER}
-Group=${SERVICE_GROUP_FALLBACK}
-WorkingDirectory=${REMOTE_APP_DIR}
-EnvironmentFile=${REMOTE_APP_DIR}/.env
-ExecStart=${REMOTE_APP_DIR}/.venv/bin/python ${REMOTE_APP_DIR}/main.py
-Restart=on-failure
-RestartSec=5
+            [Service]
+            Type=simple
+            User=${SERVICE_USER}
+            Group=${SERVICE_GROUP_FALLBACK}
+            WorkingDirectory=${REMOTE_APP_DIR}
+            EnvironmentFile=${REMOTE_APP_DIR}/.env
+            ExecStart=${REMOTE_APP_DIR}/.venv/bin/python ${REMOTE_APP_DIR}/main.py
+            Restart=on-failure
+            RestartSec=5
 
-[Install]
-WantedBy=multi-user.target
-SYSTEMD_EOF
+            [Install]
+            WantedBy=multi-user.target
+            SYSTEMD_EOF
             sudo systemctl daemon-reload
             sudo systemctl enable office-automation.service
             sudo systemctl restart office-automation.service
