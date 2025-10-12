@@ -59,7 +59,6 @@ Add these secrets to your GitHub repository:
 - `GOOGLE_SHEETS_CREDENTIALS` - Full JSON content of credentials.json
 - `GOOGLE_SHEETS_CREDENTIALS_FILE` - Path to credentials file (default: credentials.json)
 - `BALANCE_SHEET_ID` - Google Sheets spreadsheet ID
-- `BALANCE_SHEET_NAME` - Sheet name (optional, auto-generated from month)
 
 ### Deployment Configuration
 - `SSH_HOST` - Server hostname/IP

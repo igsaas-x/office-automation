@@ -17,9 +17,8 @@ class Settings:
     DB_NAME: str = os.getenv('DB_NAME', 'office_automation')
 
     # Google Sheets configuration
-    GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.getenv('GOOGLE_SHEETS_CREDENTIALS_FILE', 'credentials.json')
     BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')
-    BALANCE_SHEET_NAME: str = os.getenv('BALANCE_SHEET_NAME', 'Sheet1')
+    BALANCE_SHEET_NAME: str = os.getenv('BALANCE_SHEET_NAME', 'October')
 
     @property
     def DATABASE_URL(self) -> str:

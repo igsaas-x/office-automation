@@ -54,9 +54,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
 
             # Google Sheets Configuration
-            GOOGLE_SHEETS_CREDENTIALS_FILE=${{ secrets.GOOGLE_SHEETS_CREDENTIALS_FILE }}
             BALANCE_SHEET_ID=${{ secrets.BALANCE_SHEET_ID }}
-            BALANCE_SHEET_NAME=${{ secrets.BALANCE_SHEET_NAME }}
             EOF
 
             # Create Google Sheets credentials file

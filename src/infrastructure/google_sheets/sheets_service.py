@@ -5,7 +5,7 @@ from ..config.settings import settings
 
 class GoogleSheetsService:
     def __init__(self):
-        self.credentials_file = settings.GOOGLE_SHEETS_CREDENTIALS_FILE
+        self.credentials_file = 'credentials.json'
         self.client = None
 
     def _authenticate(self):
