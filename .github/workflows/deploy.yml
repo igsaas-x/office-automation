@@ -41,13 +41,29 @@ jobs:
 
             # Create .env file with secrets from GitHub
             cat > .env << EOF
-            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+            # Bot Tokens
+            CHECKIN_BOT_TOKEN=${{ secrets.CHECKIN_BOT_TOKEN }}
+            BALANCE_BOT_TOKEN=${{ secrets.BALANCE_BOT_TOKEN }}
+            BOT_TOKEN=${{ secrets.CHECKIN_BOT_TOKEN }}
+
+            # Database Configuration
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
+
+            # Google Sheets Configuration
+            GOOGLE_SHEETS_CREDENTIALS_FILE=${{ secrets.GOOGLE_SHEETS_CREDENTIALS_FILE }}
+            BALANCE_SHEET_ID=${{ secrets.BALANCE_SHEET_ID }}
+            BALANCE_SHEET_NAME=${{ secrets.BALANCE_SHEET_NAME }}
             EOF
+
+            # Create Google Sheets credentials file if it doesn't exist
+            if [ ! -f "credentials.json" ] && [ -n "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" ]; then
+              echo "Creating Google Sheets credentials file..."
+              echo '${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}' > credentials.json
+            fi
 
             pip install -r requirements.txt
             alembic upgrade head
@@ -62,4 +78,8 @@ jobs:
             # Start service
             sudo systemctl start office-automation
             sudo systemctl enable office-automation
+
+            echo "=== Service Status ==="
+            sudo systemctl status office-automation --no-pager
+            echo ""
             echo "=== DEPLOYMENT COMPLETED SUCCESSFULLY: $(date) ==="

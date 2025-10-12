@@ -26,17 +26,15 @@ from ...presentation.handlers.salary_advance_handler import (
     WAITING_ADVANCE_AMOUNT,
     WAITING_ADVANCE_NOTE
 )
-from ...presentation.handlers.balance_summary_handler import BalanceSummaryHandler
-from ...application.use_cases.get_balance_summary import GetBalanceSummaryUseCase
-from ...infrastructure.google_sheets.sheets_service import GoogleSheetsService
 
 class BotApplication:
     def __init__(self):
         # Initialize database
         database.create_tables()
 
-        # Create application
-        self.app = Application.builder().token(settings.BOT_TOKEN).build()
+        # Create application with check-in bot token (or fallback to BOT_TOKEN for backward compatibility)
+        bot_token = settings.CHECKIN_BOT_TOKEN or settings.BOT_TOKEN
+        self.app = Application.builder().token(bot_token).build()
 
         # Setup handlers
         self._setup_handlers()
@@ -211,7 +209,6 @@ class BotApplication:
             # Show menu in group
             keyboard = [
                 [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
-                [InlineKeyboardButton("💰 Balance Summary", callback_data="BALANCE_SUMMARY")],
             ]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -241,8 +238,7 @@ class BotApplication:
             )
 
             await message.reply_text(
-                f"✅ Group '{group.name}' has been registered successfully!\n"
-                f"You can now use the Balance Summary feature in this group."
+                f"✅ Group '{group.name}' has been registered successfully!"
             )
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -394,14 +390,6 @@ class BotApplication:
             )
             return await salary_advance_handler.save(update, context, self.show_menu)
 
-        # Balance summary handler
-        async def balance_summary_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            sheets_service = GoogleSheetsService()
-            balance_summary_handler = BalanceSummaryHandler(
-                GetBalanceSummaryUseCase(sheets_service)
-            )
-            await balance_summary_handler.show_balance_summary(update, context)
-
         # Registration conversation handler
         registration_conv = ConversationHandler(
             entry_points=[
@@ -455,9 +443,8 @@ class BotApplication:
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
         self.app.add_handler(request_advance_handler)
         self.app.add_handler(salary_advance_conv)
-        self.app.add_handler(CallbackQueryHandler(balance_summary_wrapper, pattern="^BALANCE_SUMMARY$"))
 
     def run(self):
         """Start the bot"""
-        print("Bot is running...")
+        print("Check-in Bot is running...")
         self.app.run_polling()

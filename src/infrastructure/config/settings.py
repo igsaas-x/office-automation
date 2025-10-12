@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    BOT_TOKEN: str = os.getenv('BOT_TOKEN')
+    # Bot tokens
+    CHECKIN_BOT_TOKEN: str = os.getenv('CHECKIN_BOT_TOKEN')  # For check-in, registration, salary advance
+    BALANCE_BOT_TOKEN: str = os.getenv('BALANCE_BOT_TOKEN')  # For balance summary
+    BOT_TOKEN: str = os.getenv('BOT_TOKEN')  # Backward compatibility (same as CHECKIN_BOT_TOKEN)
 
     # Database configuration
     DB_HOST: str = os.getenv('DB_HOST', 'localhost')
