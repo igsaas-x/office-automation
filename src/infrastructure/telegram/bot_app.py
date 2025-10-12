@@ -26,6 +26,9 @@ from ...presentation.handlers.salary_advance_handler import (
     WAITING_ADVANCE_AMOUNT,
     WAITING_ADVANCE_NOTE
 )
+from ...presentation.handlers.balance_summary_handler import BalanceSummaryHandler
+from ...application.use_cases.get_balance_summary import GetBalanceSummaryUseCase
+from ...infrastructure.google_sheets.sheets_service import GoogleSheetsService
 
 class BotApplication:
     def __init__(self):
@@ -208,12 +211,39 @@ class BotApplication:
             # Show menu in group
             keyboard = [
                 [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
+                [InlineKeyboardButton("💰 Balance Summary", callback_data="BALANCE_SUMMARY")],
             ]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
             menu_text = f"Hello {employee.name}!\nPlease select an option:"
 
             await message.reply_text(menu_text, reply_markup=reply_markup)
+
+        async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            from ...application.use_cases.register_group import RegisterGroupUseCase
+
+            chat = update.effective_chat
+            message = update.effective_message
+
+            # Only works in group chats
+            if chat.type not in ['group', 'supergroup']:
+                if message:
+                    await message.reply_text("This command only works in group chats.")
+                return
+
+            # Register the group
+            _, _, _, group_repo, _ = self._get_repositories()
+            register_group_use_case = RegisterGroupUseCase(group_repo)
+
+            group = register_group_use_case.execute(
+                chat_id=str(chat.id),
+                name=chat.title or "Unknown Group"
+            )
+
+            await message.reply_text(
+                f"✅ Group '{group.name}' has been registered successfully!\n"
+                f"You can now use the Balance Summary feature in this group."
+            )
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             employee_repo, _, _, _, _ = self._get_repositories()
@@ -364,6 +394,14 @@ class BotApplication:
             )
             return await salary_advance_handler.save(update, context, self.show_menu)
 
+        # Balance summary handler
+        async def balance_summary_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            sheets_service = GoogleSheetsService()
+            balance_summary_handler = BalanceSummaryHandler(
+                GetBalanceSummaryUseCase(sheets_service)
+            )
+            await balance_summary_handler.show_balance_summary(update, context)
+
         # Registration conversation handler
         registration_conv = ConversationHandler(
             entry_points=[
@@ -411,11 +449,13 @@ class BotApplication:
         # Add handlers
         self.app.add_handler(CommandHandler("menu", menu_wrapper))
         self.app.add_handler(CommandHandler("checkin", checkin_command))
+        self.app.add_handler(CommandHandler("register_group", register_group_wrapper))
         self.app.add_handler(registration_conv)
         self.app.add_handler(check_in_conv)
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
         self.app.add_handler(request_advance_handler)
         self.app.add_handler(salary_advance_conv)
+        self.app.add_handler(CallbackQueryHandler(balance_summary_wrapper, pattern="^BALANCE_SUMMARY$"))
 
     def run(self):
         """Start the bot"""

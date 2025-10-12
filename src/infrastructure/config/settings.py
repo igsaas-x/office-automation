@@ -13,6 +13,11 @@ class Settings:
     DB_PASSWORD: str = os.getenv('DB_PASSWORD', '')
     DB_NAME: str = os.getenv('DB_NAME', 'office_automation')
 
+    # Google Sheets configuration
+    GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.getenv('GOOGLE_SHEETS_CREDENTIALS_FILE', 'credentials.json')
+    BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')
+    BALANCE_SHEET_NAME: str = os.getenv('BALANCE_SHEET_NAME', 'Sheet1')
+
     @property
     def DATABASE_URL(self) -> str:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
