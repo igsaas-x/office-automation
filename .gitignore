@@ -26,6 +26,9 @@ wheels/
 # Environment
 .env
 
+# Google Sheets Credentials (contains sensitive service account keys)
+credentials.json
+
 # Database
 *.db
 
