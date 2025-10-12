@@ -60,14 +60,18 @@ jobs:
             EOF
 
             # Create Google Sheets credentials file
-            if [ -n "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" ]; then
-              echo "Creating Google Sheets credentials file..."
-              echo '${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}' > credentials.json
+            echo "Creating Google Sheets credentials file..."
+            cat > credentials.json << 'CREDENTIALS_EOF'
+            ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+            CREDENTIALS_EOF
+
+            # Verify the file was created
+            if [ -f "credentials.json" ] && [ -s "credentials.json" ]; then
               echo "✓ credentials.json created successfully"
               ls -lh credentials.json
             else
-              echo "⚠ WARNING: GOOGLE_SHEETS_CREDENTIALS secret is not set!"
-              echo "Please add it to GitHub repository secrets"
+              echo "⚠ ERROR: Failed to create credentials.json"
+              echo "Please ensure GOOGLE_SHEETS_CREDENTIALS secret is set in GitHub"
               exit 1
             fi
 
