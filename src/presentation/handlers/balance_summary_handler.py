@@ -9,12 +9,26 @@ class BalanceSummaryHandler:
     async def show_balance_summary(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle balance summary request"""
         query = update.callback_query
-        if query:
-            await query.answer()
 
-        # Get balance summary
-        summary = self.get_balance_summary_use_case.execute()
+        try:
+            # Get balance summary
+            summary = self.get_balance_summary_use_case.execute()
 
-        # Send the summary to the group
-        message = update.effective_message
-        await message.reply_text(summary, parse_mode='Markdown')
+            # If it's a callback query, edit the existing message
+            if query:
+                await query.answer()
+                await query.edit_message_text(summary, parse_mode='HTML')
+            else:
+                # Otherwise, send a new message
+                message = update.effective_message
+                await message.reply_text(summary, parse_mode='HTML')
+        except Exception as e:
+            # If there's an error, send without formatting
+            error_message = f"❌ Failed to retrieve balance summary.\n\nError: {str(e)}"
+
+            if query:
+                await query.answer()
+                await query.edit_message_text(error_message)
+            else:
+                message = update.effective_message
+                await message.reply_text(error_message)
