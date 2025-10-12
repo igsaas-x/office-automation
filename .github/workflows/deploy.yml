@@ -59,10 +59,16 @@ jobs:
             BALANCE_SHEET_NAME=${{ secrets.BALANCE_SHEET_NAME }}
             EOF
 
-            # Create Google Sheets credentials file if it doesn't exist
-            if [ ! -f "credentials.json" ] && [ -n "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" ]; then
+            # Create Google Sheets credentials file
+            if [ -n "${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}" ]; then
               echo "Creating Google Sheets credentials file..."
               echo '${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}' > credentials.json
+              echo "✓ credentials.json created successfully"
+              ls -lh credentials.json
+            else
+              echo "⚠ WARNING: GOOGLE_SHEETS_CREDENTIALS secret is not set!"
+              echo "Please add it to GitHub repository secrets"
+              exit 1
             fi
 
             pip install -r requirements.txt
