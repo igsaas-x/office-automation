@@ -16,10 +16,8 @@ from ...infrastructure.persistence.check_in_repository_impl import CheckInReposi
 from ...infrastructure.persistence.salary_advance_repository_impl import SalaryAdvanceRepository
 from ...application.use_cases.register_employee import RegisterEmployeeUseCase
 from ...application.use_cases.get_employee import GetEmployeeUseCase
-from ...application.use_cases.record_check_in import RecordCheckInUseCase
 from ...application.use_cases.record_salary_advance import RecordSalaryAdvanceUseCase
 from ...presentation.handlers.employee_handler import EmployeeHandler, WAITING_EMPLOYEE_NAME
-from ...presentation.handlers.check_in_handler import CheckInHandler, WAITING_LOCATION
 from ...presentation.handlers.salary_advance_handler import (
     SalaryAdvanceHandler,
     WAITING_EMPLOYEE_NAME_ADV,
@@ -58,7 +56,7 @@ class BotApplication:
         user = update.effective_user
 
         keyboard = [
-            [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
+            [InlineKeyboardButton("📍 Check In", url="https://t.me/OALocal_bot/checkin")],
             [InlineKeyboardButton("📝 Request Advance", callback_data="REQUEST_ADVANCE")],
         ]
 
@@ -143,7 +141,6 @@ class BotApplication:
         # Employee handlers
         async def start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
-            message = update.effective_message
 
             employee_repo, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
@@ -151,37 +148,13 @@ class BotApplication:
                 GetEmployeeUseCase(employee_repo)
             )
 
-            start_mentions_checkin = False
-            if message and message.text:
-                lowered = message.text.lower()
-                start_mentions_checkin = lowered.startswith('/start') and 'checkin' in lowered
-
-            pending_from_args = (
-                context.args
-                and len(context.args) > 0
-                and context.args[0].lower() == "checkin"
-            )
-
-            if start_mentions_checkin or pending_from_args:
-                context.user_data['pending_checkin_command'] = True
-
-            # Create a wrapper for show_menu that skips if checkin is pending or in groups
+            # Create a wrapper for show_menu that skips in groups
             async def show_menu_or_skip(update, context, employee_name=None):
-                if context.user_data.get('pending_checkin_command'):
-                    return
                 if chat.type in ['group', 'supergroup']:
                     return
                 await self.show_menu(update, context, employee_name)
 
-            result = await employee_handler.start(update, context, show_menu_or_skip)
-
-            pending_from_flag = context.user_data.get('pending_checkin_command', False)
-
-            if result == ConversationHandler.END and (pending_from_args or pending_from_flag):
-                context.user_data.pop('pending_checkin_command', None)
-                await checkin_command(update, context)
-
-            return result
+            return await employee_handler.start(update, context, show_menu_or_skip)
 
         async def menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
@@ -208,7 +181,7 @@ class BotApplication:
 
             # Show menu in group
             keyboard = [
-                [InlineKeyboardButton("📍 Check In", callback_data="CHECK_IN")],
+                [InlineKeyboardButton("📍 Check In", url="https://t.me/OALocal_bot/checkin")],
             ]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -248,25 +221,15 @@ class BotApplication:
                 GetEmployeeUseCase(employee_repo)
             )
 
-            message = update.effective_message
             chat = update.effective_chat
-
-            if message and message.text and 'checkin' in message.text.lower():
-                context.user_data['pending_checkin_command'] = True
 
             # In groups, don't show menu
             if chat.type in ['group', 'supergroup']:
                 async def skip_menu(update, context, employee_name=None):
                     pass
-                result = await employee_handler.register(update, context, skip_menu)
+                return await employee_handler.register(update, context, skip_menu)
             else:
-                result = await employee_handler.register(update, context, self.show_menu)
-
-            if context.user_data.get('pending_checkin_command'):
-                context.user_data.pop('pending_checkin_command', None)
-                await checkin_command(update, context)
-
-            return result
+                return await employee_handler.register(update, context, self.show_menu)
 
         async def register_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             employee_repo, _, _, _, _ = self._get_repositories()
@@ -280,71 +243,6 @@ class BotApplication:
                 pass
 
             return await employee_handler.start(update, context, skip_menu)
-
-        async def checkin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            chat = update.effective_chat
-            message = update.effective_message
-
-            if chat.type != 'private':
-                if message:
-                    await message.reply_text(
-                        "Please use /checkin in a private chat with the bot."
-                    )
-                return
-
-            employee_repo, _, _, _, _ = self._get_repositories()
-            employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(
-                str(update.effective_user.id)
-            )
-
-            if not employee:
-                await message.reply_text("Please register first using /start in a private chat.")
-                return
-
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📍 Start Check-In", callback_data="CHECK_IN")]
-            ])
-
-            await message.reply_text(
-                "Ready to check in? Tap the button below to share your location.",
-                reply_markup=keyboard
-            )
-
-        # Check-in handlers
-        async def check_in_request_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            from ...application.use_cases.register_group import RegisterGroupUseCase
-            from ...application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
-
-            employee_repo, check_in_repo, _, group_repo, employee_group_repo = self._get_repositories()
-            check_in_handler = CheckInHandler(
-                RecordCheckInUseCase(check_in_repo, employee_repo, group_repo),
-                GetEmployeeUseCase(employee_repo),
-                RegisterGroupUseCase(group_repo),
-                AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
-            )
-            if update.callback_query:
-                await update.callback_query.answer()
-                await update.callback_query.edit_message_reply_markup(reply_markup=None)
-                context.chat_data['menu_message_id'] = update.callback_query.message.message_id
-            return await check_in_handler.request_location(update, context)
-
-        async def check_in_process_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            from ...application.use_cases.register_group import RegisterGroupUseCase
-            from ...application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
-
-            employee_repo, check_in_repo, _, group_repo, employee_group_repo = self._get_repositories()
-            check_in_handler = CheckInHandler(
-                RecordCheckInUseCase(check_in_repo, employee_repo, group_repo),
-                GetEmployeeUseCase(employee_repo),
-                RegisterGroupUseCase(group_repo),
-                AddEmployeeToGroupUseCase(employee_group_repo, employee_repo, group_repo)
-            )
-
-            # Don't show menu in private chat after check-in
-            async def skip_menu(update, context, employee_name=None):
-                pass
-
-            return await check_in_handler.process_check_in(update, context, skip_menu)
 
         async def request_advance_placeholder(update: Update, context: ContextTypes.DEFAULT_TYPE):
             query = update.callback_query
@@ -402,18 +300,6 @@ class BotApplication:
             fallbacks=[CommandHandler("cancel", self.cancel)],
         )
 
-        # Check-in conversation handler
-        check_in_conv = ConversationHandler(
-            entry_points=[
-                CallbackQueryHandler(check_in_request_wrapper, pattern="^CHECK_IN$"),
-                MessageHandler(filters.Regex("^📍 Check In$"), check_in_request_wrapper),
-            ],
-            states={
-                WAITING_LOCATION: [MessageHandler(filters.LOCATION, check_in_process_wrapper)],
-            },
-            fallbacks=[CommandHandler("cancel", self.cancel)],
-        )
-
         # Placeholder handler for request advance button
         request_advance_handler = MessageHandler(
             filters.Regex("^📝 Request Advance$"),
@@ -436,10 +322,8 @@ class BotApplication:
 
         # Add handlers
         self.app.add_handler(CommandHandler("menu", menu_wrapper))
-        self.app.add_handler(CommandHandler("checkin", checkin_command))
         self.app.add_handler(CommandHandler("register_group", register_group_wrapper))
         self.app.add_handler(registration_conv)
-        self.app.add_handler(check_in_conv)
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
         self.app.add_handler(request_advance_handler)
         self.app.add_handler(salary_advance_conv)
