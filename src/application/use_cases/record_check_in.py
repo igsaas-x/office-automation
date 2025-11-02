@@ -37,7 +37,8 @@ class RecordCheckInUseCase:
         check_in = CheckIn.create(
             employee_id=request.employee_id,
             group_id=request.group_id,
-            location=location
+            location=location,
+            photo_url=request.photo_url
         )
 
         # Save check-in

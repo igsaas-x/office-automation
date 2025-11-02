@@ -15,6 +15,7 @@ class CheckInRepository(ICheckInRepository):
             group_id=check_in.group_id,
             latitude=check_in.location.latitude,
             longitude=check_in.location.longitude,
+            photo_url=check_in.photo_url,
             timestamp=check_in.timestamp
         )
         self.session.add(db_check_in)
@@ -38,5 +39,6 @@ class CheckInRepository(ICheckInRepository):
                 latitude=model.latitude,
                 longitude=model.longitude
             ),
-            timestamp=model.timestamp
+            timestamp=model.timestamp,
+            photo_url=model.photo_url
         )

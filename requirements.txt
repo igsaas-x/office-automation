@@ -6,3 +6,6 @@ cryptography==46.0.2
 alembic==1.16.5
 gspread==6.1.4
 google-auth==2.37.0
+flask==3.0.0
+flask-cors==4.0.0
+pillow==11.0.0

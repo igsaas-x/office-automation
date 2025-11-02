@@ -55,6 +55,7 @@ class CheckInModel(Base):
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+    photo_url = Column(String(512), nullable=True)
     timestamp = Column(DateTime, default=utc_now)
 
     employee = relationship('EmployeeModel', back_populates='check_ins')
