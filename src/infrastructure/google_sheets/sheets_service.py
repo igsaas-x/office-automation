@@ -30,9 +30,13 @@ class GoogleSheetsService:
         text = text.replace('>', '&gt;')
         return text
 
-    def get_balance_summary(self) -> str:
+    def get_balance_summary(self, month: str = None) -> str:
         """
         Read balance data from Google Sheets and format it for display
+
+        Args:
+            month: Optional month name (e.g., "January", "February"). If None, uses current month.
+
         Returns formatted balance summary as string
         """
         try:
@@ -40,8 +44,8 @@ class GoogleSheetsService:
             cambodia_tz = timezone(timedelta(hours=7))
             current_time = datetime.now(cambodia_tz)
 
-            # Generate sheet name from current month (e.g., "October")
-            sheet_name = current_time.strftime("%B")  # Full month name with first capital
+            # Generate sheet name from provided month or current month
+            sheet_name = month if month else current_time.strftime("%B")  # Full month name with first capital
             formatted_date = current_time.strftime("%d/%m/%Y %I:%M %p")
 
             client = self._authenticate()
