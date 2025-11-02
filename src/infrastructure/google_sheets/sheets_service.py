@@ -100,6 +100,9 @@ class GoogleSheetsService:
 
                 formatted_text += "</pre>"
 
+            # Add link to view full spreadsheet details
+            formatted_text += '\n\n📄 <a href="https://docs.google.com/spreadsheets/d/1ZiEstn6X-vcJ8AIMbikg7ObPBa85EdkCNEPxGiUgkMo/edit?usp=sharing">View Full Details</a>'
+
             return formatted_text
 
         except FileNotFoundError:
