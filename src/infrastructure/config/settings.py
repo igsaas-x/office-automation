@@ -19,6 +19,7 @@ class Settings:
     # Google Sheets configuration
     BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')
     BALANCE_SHEET_NAME: str = os.getenv('BALANCE_SHEET_NAME', 'October')
+    MUSIC_SCHOOL_SHEET_ID: str = os.getenv('MUSIC_SCHOOL_SHEET_ID', '1vSjYtvKxQPdFUrowO2kd7bXoU9bwd_Tpf06Twdw_4YU')
 
     @property
     def DATABASE_URL(self) -> str:

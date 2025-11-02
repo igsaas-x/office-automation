@@ -30,12 +30,14 @@ class GoogleSheetsService:
         text = text.replace('>', '&gt;')
         return text
 
-    def get_balance_summary(self, month: str = None) -> str:
+    def get_balance_summary(self, month: str = None, sheet_id: str = None, sheet_url: str = None) -> str:
         """
         Read balance data from Google Sheets and format it for display
 
         Args:
             month: Optional month name (e.g., "January", "February"). If None, uses current month.
+            sheet_id: Optional Google Sheets ID. If None, uses settings.BALANCE_SHEET_ID.
+            sheet_url: Optional full Google Sheets URL for the "View Full Details" link.
 
         Returns formatted balance summary as string
         """
@@ -48,8 +50,11 @@ class GoogleSheetsService:
             sheet_name = month if month else current_time.strftime("%B")  # Full month name with first capital
             formatted_date = current_time.strftime("%d/%m/%Y %I:%M %p")
 
+            # Use provided sheet_id or fall back to settings
+            target_sheet_id = sheet_id if sheet_id else settings.BALANCE_SHEET_ID
+
             client = self._authenticate()
-            sheet = client.open_by_key(settings.BALANCE_SHEET_ID)
+            sheet = client.open_by_key(target_sheet_id)
 
             # Try to get the worksheet by month name
             try:
@@ -101,7 +106,9 @@ class GoogleSheetsService:
                 formatted_text += "</pre>"
 
             # Add link to view full spreadsheet details
-            formatted_text += '\n\n📄 <a href="https://docs.google.com/spreadsheets/d/1ZiEstn6X-vcJ8AIMbikg7ObPBa85EdkCNEPxGiUgkMo/edit?usp=sharing">View Full Details</a>'
+            default_url = "https://docs.google.com/spreadsheets/d/1ZiEstn6X-vcJ8AIMbikg7ObPBa85EdkCNEPxGiUgkMo/edit?usp=sharing"
+            link_url = sheet_url if sheet_url else default_url
+            formatted_text += f'\n\n📄 <a href="{link_url}">View Full Details</a>'
 
             return formatted_text
 

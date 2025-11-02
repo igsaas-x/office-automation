@@ -12,13 +12,21 @@ class BalanceSummaryHandler:
     def __init__(self, get_balance_summary_use_case: GetBalanceSummaryUseCase):
         self.get_balance_summary_use_case = get_balance_summary_use_case
 
-    async def show_month_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show month selection keyboard"""
+    async def show_month_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                   callback_prefix: str = "BALANCE_MONTH", title: str = "📅 Select a month to view balance summary:"):
+        """Show month selection keyboard
+
+        Args:
+            update: Telegram update
+            context: Telegram context
+            callback_prefix: Prefix for callback data (e.g., "BALANCE_MONTH" or "MUSIC_SCHOOL_MONTH")
+            title: Message title to display
+        """
         # Create inline keyboard with month buttons (3 columns)
         keyboard = []
         row = []
         for i, month in enumerate(self.MONTHS):
-            row.append(InlineKeyboardButton(month, callback_data=f"BALANCE_MONTH_{month}"))
+            row.append(InlineKeyboardButton(month, callback_data=f"{callback_prefix}_{month}"))
             if (i + 1) % 3 == 0:
                 keyboard.append(row)
                 row = []
@@ -30,18 +38,24 @@ class BalanceSummaryHandler:
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message = update.effective_message
-        await message.reply_text(
-            "📅 Select a month to view balance summary:",
-            reply_markup=reply_markup
-        )
+        await message.reply_text(title, reply_markup=reply_markup)
 
-    async def show_balance_summary(self, update: Update, context: ContextTypes.DEFAULT_TYPE, month: str = None):
-        """Handle balance summary request for a specific month"""
+    async def show_balance_summary(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                   month: str = None, sheet_id: str = None, sheet_url: str = None):
+        """Handle balance summary request for a specific month
+
+        Args:
+            update: Telegram update
+            context: Telegram context
+            month: Optional month name
+            sheet_id: Optional Google Sheets ID
+            sheet_url: Optional Google Sheets URL for the link
+        """
         query = update.callback_query
 
         try:
             # Get balance summary for the specified month (or current if None)
-            summary = self.get_balance_summary_use_case.execute(month)
+            summary = self.get_balance_summary_use_case.execute(month, sheet_id, sheet_url)
 
             # If it's a callback query, edit the existing message
             if query:

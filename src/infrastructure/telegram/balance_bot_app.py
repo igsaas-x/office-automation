@@ -26,7 +26,9 @@ class BalanceBotApplication:
         message = update.effective_message
         await message.reply_text(
             "👋 Welcome to the Balance Summary Bot!\n\n"
-            "Use /balance to select a month and view the balance summary."
+            "Available commands:\n"
+            "• /balance - View office balance summary\n"
+            "• /balance_music_school - View music school balance summary"
         )
 
     async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,6 +38,19 @@ class BalanceBotApplication:
             GetBalanceSummaryUseCase(sheets_service)
         )
         await balance_summary_handler.show_month_selection(update, context)
+
+    async def balance_music_school_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /balance_music_school command - show month selection for music school"""
+        sheets_service = GoogleSheetsService()
+        balance_summary_handler = BalanceSummaryHandler(
+            GetBalanceSummaryUseCase(sheets_service)
+        )
+        await balance_summary_handler.show_month_selection(
+            update,
+            context,
+            callback_prefix="MUSIC_SCHOOL_MONTH",
+            title="🎵 Select a month to view Music School balance summary:"
+        )
 
     async def balance_month_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle month selection callback"""
@@ -48,6 +63,24 @@ class BalanceBotApplication:
             GetBalanceSummaryUseCase(sheets_service)
         )
         await balance_summary_handler.show_balance_summary(update, context, month=month)
+
+    async def music_school_month_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle music school month selection callback"""
+        query = update.callback_query
+        # Extract month from callback_data (format: "MUSIC_SCHOOL_MONTH_{month}")
+        month = query.data.replace("MUSIC_SCHOOL_MONTH_", "")
+
+        sheets_service = GoogleSheetsService()
+        balance_summary_handler = BalanceSummaryHandler(
+            GetBalanceSummaryUseCase(sheets_service)
+        )
+        await balance_summary_handler.show_balance_summary(
+            update,
+            context,
+            month=month,
+            sheet_id=settings.MUSIC_SCHOOL_SHEET_ID,
+            sheet_url="https://docs.google.com/spreadsheets/d/1vSjYtvKxQPdFUrowO2kd7bXoU9bwd_Tpf06Twdw_4YU/edit?gid=0#gid=0"
+        )
 
     async def balance_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle balance button callback - show month selection"""
@@ -62,9 +95,11 @@ class BalanceBotApplication:
         # Command handlers
         self.app.add_handler(CommandHandler("start", self.start_command))
         self.app.add_handler(CommandHandler("balance", self.balance_command))
+        self.app.add_handler(CommandHandler("balance_music_school", self.balance_music_school_command))
 
         # Callback query handlers
         self.app.add_handler(CallbackQueryHandler(self.balance_month_callback, pattern="^BALANCE_MONTH_"))
+        self.app.add_handler(CallbackQueryHandler(self.music_school_month_callback, pattern="^MUSIC_SCHOOL_MONTH_"))
         self.app.add_handler(CallbackQueryHandler(self.balance_callback, pattern="^BALANCE_SUMMARY$"))
 
     def run(self):
