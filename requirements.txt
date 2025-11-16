@@ -9,3 +9,4 @@ google-auth==2.37.0
 flask==3.0.0
 flask-cors==4.0.0
 pillow==11.0.0
+flasgger==0.9.7.1

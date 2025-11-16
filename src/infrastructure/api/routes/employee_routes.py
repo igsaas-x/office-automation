@@ -27,18 +27,112 @@ def get_repositories():
 def register_employee():
     """
     Register a new employee
-
-    Expected JSON body:
-    {
-        "telegram_id": "123456789",
-        "name": "John Doe",
-        "phone": "1234567890",  // optional
-        "role": "Developer",  // optional
-        "date_start_work": "2024-01-01",  // optional, ISO format or YYYY-MM-DD
-        "probation_months": 3,  // optional
-        "base_salary": 1000.0,  // optional
-        "bonus": 100.0  // optional
-    }
+    ---
+    tags:
+      - Employees
+    parameters:
+      - in: body
+        name: body
+        required: true
+        description: Employee registration data
+        schema:
+          type: object
+          required:
+            - telegram_id
+            - name
+          properties:
+            telegram_id:
+              type: string
+              example: "123456789"
+              description: Telegram user ID
+            name:
+              type: string
+              example: "John Doe"
+              description: Employee full name
+            phone:
+              type: string
+              example: "1234567890"
+              description: Employee phone number
+            role:
+              type: string
+              example: "Developer"
+              description: Employee role/position
+            date_start_work:
+              type: string
+              example: "2024-01-01"
+              description: Date employee started work (ISO format or YYYY-MM-DD)
+            probation_months:
+              type: integer
+              example: 3
+              description: Number of probation months
+            base_salary:
+              type: number
+              format: float
+              example: 1000.0
+              description: Base salary amount
+            bonus:
+              type: number
+              format: float
+              example: 100.0
+              description: Bonus amount
+    responses:
+      201:
+        description: Employee registered successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Employee registered successfully"
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                telegram_id:
+                  type: string
+                  example: "123456789"
+                name:
+                  type: string
+                  example: "John Doe"
+                phone:
+                  type: string
+                  example: "1234567890"
+                role:
+                  type: string
+                  example: "Developer"
+                date_start_work:
+                  type: string
+                  example: "2024-01-01T00:00:00"
+                probation_months:
+                  type: integer
+                  example: 3
+                base_salary:
+                  type: number
+                  example: 1000.0
+                bonus:
+                  type: number
+                  example: 100.0
+                created_at:
+                  type: string
+                  example: "2024-01-01T10:30:00"
+      400:
+        description: Bad request - missing required fields or validation error
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Missing required fields: telegram_id, name"
+      500:
+        description: Internal server error
     """
     try:
         data = request.get_json()
@@ -105,9 +199,96 @@ def register_employee():
 def get_employee_status(employee_id):
     """
     Get employee status including salary, borrows, and allowances
-
-    Path parameter:
-    - employee_id: Employee ID (integer)
+    ---
+    tags:
+      - Staff Operations
+    parameters:
+      - in: path
+        name: employee_id
+        type: integer
+        required: true
+        description: Employee ID
+        example: 1
+    responses:
+      200:
+        description: Employee status retrieved successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                employee:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    telegram_id:
+                      type: string
+                    name:
+                      type: string
+                    phone:
+                      type: string
+                    role:
+                      type: string
+                    date_start_work:
+                      type: string
+                    probation_months:
+                      type: integer
+                    base_salary:
+                      type: number
+                    bonus:
+                      type: number
+                    created_at:
+                      type: string
+                salary_advances:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      amount:
+                        type: string
+                      note:
+                        type: string
+                      created_by:
+                        type: string
+                      timestamp:
+                        type: string
+                allowances:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      amount:
+                        type: number
+                      allowance_type:
+                        type: string
+                      note:
+                        type: string
+                      created_by:
+                        type: string
+                      timestamp:
+                        type: string
+                summary:
+                  type: object
+                  properties:
+                    total_salary_advances:
+                      type: number
+                    total_allowances:
+                      type: number
+                    total_compensation:
+                      type: number
+      404:
+        description: Employee not found
+      500:
+        description: Internal server error
     """
     try:
         # Get repositories
@@ -184,9 +365,23 @@ def get_employee_status(employee_id):
 def get_employee_status_by_telegram_id(telegram_id):
     """
     Get employee status by Telegram ID
-
-    Path parameter:
-    - telegram_id: Telegram user ID
+    ---
+    tags:
+      - Staff Operations
+    parameters:
+      - in: path
+        name: telegram_id
+        type: string
+        required: true
+        description: Telegram user ID
+        example: "123456789"
+    responses:
+      200:
+        description: Employee status retrieved successfully
+      404:
+        description: Employee not found
+      500:
+        description: Internal server error
     """
     try:
         # Get repositories
@@ -263,17 +458,77 @@ def get_employee_status_by_telegram_id(telegram_id):
 def record_allowance(employee_id):
     """
     Record an allowance for an employee
-
-    Path parameter:
-    - employee_id: Employee ID (integer)
-
-    Expected JSON body:
-    {
-        "amount": 50.0,
-        "allowance_type": "transport",  // e.g., transport, meal, housing
-        "created_by": "manager_name",
-        "note": "Monthly transport allowance"  // optional
-    }
+    ---
+    tags:
+      - Staff Operations
+    parameters:
+      - in: path
+        name: employee_id
+        type: integer
+        required: true
+        description: Employee ID
+        example: 1
+      - in: body
+        name: body
+        required: true
+        description: Allowance data
+        schema:
+          type: object
+          required:
+            - amount
+            - allowance_type
+            - created_by
+          properties:
+            amount:
+              type: number
+              format: float
+              example: 50.0
+              description: Allowance amount
+            allowance_type:
+              type: string
+              example: "transport"
+              description: Type of allowance (e.g., transport, meal, housing)
+            created_by:
+              type: string
+              example: "manager_name"
+              description: Who created this allowance record
+            note:
+              type: string
+              example: "Monthly transport allowance"
+              description: Optional notes
+    responses:
+      201:
+        description: Allowance recorded successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Allowance recorded successfully"
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                employee_id:
+                  type: integer
+                amount:
+                  type: number
+                allowance_type:
+                  type: string
+                note:
+                  type: string
+                created_by:
+                  type: string
+                timestamp:
+                  type: string
+      400:
+        description: Bad request - validation error
+      500:
+        description: Internal server error
     """
     try:
         data = request.get_json()
@@ -334,16 +589,66 @@ def record_allowance(employee_id):
 def record_salary_advance(employee_id):
     """
     Record a salary advance (borrow) for an employee
-
-    Path parameter:
-    - employee_id: Employee ID (integer)
-
-    Expected JSON body:
-    {
-        "amount": 100.0,
-        "created_by": "manager_name",
-        "note": "Emergency advance"  // optional
-    }
+    ---
+    tags:
+      - Staff Operations
+    parameters:
+      - in: path
+        name: employee_id
+        type: integer
+        required: true
+        description: Employee ID
+        example: 1
+      - in: body
+        name: body
+        required: true
+        description: Salary advance data
+        schema:
+          type: object
+          required:
+            - amount
+            - created_by
+          properties:
+            amount:
+              type: number
+              format: float
+              example: 100.0
+              description: Salary advance amount
+            created_by:
+              type: string
+              example: "manager_name"
+              description: Who authorized this salary advance
+            note:
+              type: string
+              example: "Emergency advance"
+              description: Optional notes
+    responses:
+      201:
+        description: Salary advance recorded successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Salary advance recorded successfully"
+            data:
+              type: object
+              properties:
+                employee_name:
+                  type: string
+                amount:
+                  type: string
+                timestamp:
+                  type: string
+      400:
+        description: Bad request - validation error
+      404:
+        description: Employee not found
+      500:
+        description: Internal server error
     """
     try:
         data = request.get_json()

@@ -32,13 +32,103 @@ def get_repositories():
 def checkin():
     """
     Check-in endpoint for mini app
-
-    Expected form data:
-    - telegram_user_id: Telegram user ID
-    - group_chat_id: Telegram group chat ID
-    - latitude: Location latitude
-    - longitude: Location longitude
-    - photo: (optional) Photo file
+    ---
+    tags:
+      - Check-ins
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: telegram_user_id
+        type: string
+        required: true
+        description: Telegram user ID
+        example: "123456789"
+      - in: formData
+        name: group_chat_id
+        type: string
+        required: true
+        description: Telegram group chat ID
+        example: "-100123456789"
+      - in: formData
+        name: latitude
+        type: number
+        format: float
+        required: true
+        description: Location latitude
+        example: 11.5564
+      - in: formData
+        name: longitude
+        type: number
+        format: float
+        required: true
+        description: Location longitude
+        example: 104.9282
+      - in: formData
+        name: group_name
+        type: string
+        required: false
+        description: Group name (optional)
+        example: "Office Team"
+      - in: formData
+        name: photo
+        type: file
+        required: false
+        description: Check-in photo (optional, max 16MB)
+    responses:
+      200:
+        description: Check-in successful
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Check-in recorded successfully"
+            data:
+              type: object
+              properties:
+                employee_name:
+                  type: string
+                  example: "John Doe"
+                group_name:
+                  type: string
+                  example: "Office Team"
+                timestamp:
+                  type: string
+                  example: "2024-01-01 10:30:00"
+                location:
+                  type: string
+                  example: "11.5564, 104.9282"
+                photo_url:
+                  type: string
+                  example: "/uploads/photos/123456789_20240101_103000_photo.jpg"
+      400:
+        description: Bad request - missing required fields or validation error
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Missing required fields"
+      404:
+        description: Employee not registered
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Employee not registered. Please register first."
+      500:
+        description: Internal server error
     """
     try:
         # Get form data
@@ -150,7 +240,24 @@ def checkin():
 
 @checkin_bp.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
+    """
+    Health check endpoint
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: API is healthy and running
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "API is running"
+    """
     return jsonify({
         'success': True,
         'message': 'API is running'

@@ -94,7 +94,7 @@ class GetEmployeeStatusUseCase:
         ]
 
         # Calculate totals
-        total_salary_advances = sum(float(str(adv.amount)) for adv in salary_advances)
+        total_salary_advances = sum(float(adv.amount.amount) for adv in salary_advances)
         total_allowances = sum(allow.amount for allow in allowances)
 
         return EmployeeStatusResponse(
