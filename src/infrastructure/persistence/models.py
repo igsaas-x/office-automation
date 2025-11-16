@@ -26,11 +26,18 @@ class EmployeeModel(Base):
     id = Column(Integer, primary_key=True)
     telegram_id = Column(String(255), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
+    phone = Column(String(50), nullable=True)
+    role = Column(String(100), nullable=True)
+    date_start_work = Column(DateTime, nullable=True)
+    probation_months = Column(Integer, nullable=True)
+    base_salary = Column(Float, nullable=True)
+    bonus = Column(Float, nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
     check_ins = relationship('CheckInModel', back_populates='employee')
     salary_advances = relationship('SalaryAdvanceModel', back_populates='employee')
     employee_groups = relationship('EmployeeGroupModel', back_populates='employee')
+    allowances = relationship('AllowanceModel', back_populates='employee')
 
 class EmployeeGroupModel(Base):
     __tablename__ = 'employee_groups'
@@ -72,3 +79,16 @@ class SalaryAdvanceModel(Base):
     timestamp = Column(DateTime, default=utc_now)
 
     employee = relationship('EmployeeModel', back_populates='salary_advances')
+
+class AllowanceModel(Base):
+    __tablename__ = 'allowances'
+
+    id = Column(Integer, primary_key=True)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    amount = Column(Float, nullable=False)
+    allowance_type = Column(String(100), nullable=False)  # e.g., 'transport', 'meal', 'housing', etc.
+    note = Column(Text)
+    created_by = Column(String(255), nullable=False)
+    timestamp = Column(DateTime, default=utc_now)
+
+    employee = relationship('EmployeeModel', back_populates='allowances')

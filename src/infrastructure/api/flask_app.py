@@ -20,6 +20,8 @@ def create_app():
 
     # Register blueprints
     from .routes.checkin_routes import checkin_bp
+    from .routes.employee_routes import employee_bp
     app.register_blueprint(checkin_bp, url_prefix='/api')
+    app.register_blueprint(employee_bp, url_prefix='/api')
 
     return app
