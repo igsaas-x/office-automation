@@ -33,7 +33,7 @@ def run_api_server():
 
     # Get configuration from environment
     host = os.getenv('API_HOST', '0.0.0.0')
-    port = int(os.getenv('API_PORT', '5000'))
+    port = int(os.getenv('API_PORT', '80'))
     debug = os.getenv('API_DEBUG', 'False').lower() == 'true'
 
     print(f"Starting Flask API server on {host}:{port}")
