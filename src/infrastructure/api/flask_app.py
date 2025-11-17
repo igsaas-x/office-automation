@@ -2,9 +2,13 @@ from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
 from ...infrastructure.config.settings import settings
+from .middleware import validate_telegram_auth
 
 def create_app():
     app = Flask(__name__)
+
+    # Register Telegram authentication middleware
+    app.before_request(validate_telegram_auth)
 
     # Configure CORS
     CORS(app, resources={

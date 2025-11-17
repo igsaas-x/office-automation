@@ -25,6 +25,15 @@ class Settings:
     def DATABASE_URL(self) -> str:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
+    # Telegram authentication configuration
+    TELEGRAM_AUTH_ENABLED: bool = os.getenv('TELEGRAM_AUTH_ENABLED', 'true').lower() == 'true'
+    TELEGRAM_AUTH_STRICT_MODE: bool = os.getenv('TELEGRAM_AUTH_STRICT_MODE', 'true').lower() == 'true'
+    TELEGRAM_INITDATA_MAX_AGE: int = int(os.getenv('TELEGRAM_INITDATA_MAX_AGE', '3600'))  # 1 hour
+    TELEGRAM_AUTH_CACHE_TTL: int = int(os.getenv('TELEGRAM_AUTH_CACHE_TTL', '300'))  # 5 minutes
+    TELEGRAM_RATE_LIMIT_PER_USER: int = int(os.getenv('TELEGRAM_RATE_LIMIT_PER_USER', '20'))
+    TELEGRAM_RATE_LIMIT_WINDOW: int = int(os.getenv('TELEGRAM_RATE_LIMIT_WINDOW', '60'))  # seconds
+    TELEGRAM_AUTH_EXEMPT_PATHS: str = os.getenv('TELEGRAM_AUTH_EXEMPT_PATHS', '/health,/api-docs,/metrics')
+
     ADMIN_IDS: list[int] = []
 
     @classmethod
