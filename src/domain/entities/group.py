@@ -7,13 +7,21 @@ class Group:
     id: Optional[int]
     chat_id: str
     name: str
-    created_at: datetime
+    business_name: Optional[str] = None
+    package_level: str = 'free'  # free, basic, premium
+    package_updated_at: Optional[datetime] = None
+    package_updated_by: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     @classmethod
-    def create(cls, chat_id: str, name: str) -> 'Group':
+    def create(cls, chat_id: str, name: str, business_name: Optional[str] = None) -> 'Group':
         return cls(
             id=None,
             chat_id=chat_id,
             name=name,
+            business_name=business_name,
+            package_level='free',
+            package_updated_at=None,
+            package_updated_by=None,
             created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )

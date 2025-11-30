@@ -14,11 +14,19 @@ class GroupRepository(IGroupRepository):
             db_group = self.session.query(GroupModel).filter_by(id=group.id).first()
             db_group.name = group.name
             db_group.chat_id = group.chat_id
+            db_group.business_name = group.business_name
+            db_group.package_level = group.package_level
+            db_group.package_updated_at = group.package_updated_at
+            db_group.package_updated_by = group.package_updated_by
         else:
             # Create new
             db_group = GroupModel(
                 chat_id=group.chat_id,
                 name=group.name,
+                business_name=group.business_name,
+                package_level=group.package_level,
+                package_updated_at=group.package_updated_at,
+                package_updated_by=group.package_updated_by,
                 created_at=group.created_at
             )
             self.session.add(db_group)
@@ -45,5 +53,9 @@ class GroupRepository(IGroupRepository):
             id=model.id,
             chat_id=model.chat_id,
             name=model.name,
+            business_name=model.business_name,
+            package_level=model.package_level,
+            package_updated_at=model.package_updated_at,
+            package_updated_by=model.package_updated_by,
             created_at=model.created_at
         )

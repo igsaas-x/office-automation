@@ -15,6 +15,10 @@ class GroupModel(Base):
     id = Column(Integer, primary_key=True)
     chat_id = Column(String(255), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
+    business_name = Column(String(255), nullable=True)  # Business/branch name
+    package_level = Column(String(20), nullable=False, default='free')  # free, basic, premium
+    package_updated_at = Column(DateTime, nullable=True)  # When package was last updated
+    package_updated_by = Column(String(255), nullable=True)  # Admin Telegram ID who updated
     created_at = Column(DateTime, default=utc_now)
 
     check_ins = relationship('CheckInModel', back_populates='group')
