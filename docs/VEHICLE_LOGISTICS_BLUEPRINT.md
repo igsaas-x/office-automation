@@ -9,8 +9,8 @@ Simple vehicle trip and fuel tracking system for logistics operations via Telegr
 ## Core Requirements - Phase 1
 
 ### Setup
-1. Register drivers (Name, Phone, Role)
-2. Register vehicles (License plate/ស្លាកលេខឡាន, Type, Driver assignment)
+1. Register vehicles (License plate/ស្លាកលេខឡាន, Type)
+2. Register drivers (Name, Phone, assign to Vehicle) - Role defaults to DRIVER
 
 ### Daily Operations
 1. Record trips - track how many trips each vehicle makes per day (auto-increment)
@@ -27,17 +27,6 @@ Simple vehicle trip and fuel tracking system for logistics operations via Telegr
 
 ## 1. Database Entities
 
-### Driver
-```python
-Driver:
-  - id: UUID
-  - group_id: UUID (FK)
-  - name: String
-  - phone: String (unique per group)
-  - role: String (DRIVER, HELPER, MANAGER)
-  - created_at: DateTime
-```
-
 ### Vehicle
 ```python
 Vehicle:
@@ -45,7 +34,18 @@ Vehicle:
   - group_id: UUID (FK)
   - license_plate: String (unique per group)
   - vehicle_type: String (TRUCK, VAN, MOTORCYCLE, CAR)
-  - assigned_driver_id: UUID (FK to Driver)
+  - created_at: DateTime
+```
+
+### Driver
+```python
+Driver:
+  - id: UUID
+  - group_id: UUID (FK)
+  - name: String
+  - phone: String (unique per group)
+  - role: String (defaults to DRIVER in Phase 1)
+  - assigned_vehicle_id: UUID (FK to Vehicle, optional)
   - created_at: DateTime
 ```
 
@@ -76,36 +76,129 @@ FuelRecord:
 
 ---
 
-## 2. Bot Commands
+## 2. Bot Menu Structure
 
-### Setup Commands
+### Command Hierarchy
 
-#### `/register_driver`
-**Flow:**
-1. Ask: "Enter driver name:"
-2. Ask: "Enter phone number:"
-3. Ask: "Select role:" → Buttons: [Driver] [Helper] [Manager]
-4. Save and confirm
+```
+Level 1 (Commands):
+├── /register (existing - employee registration)
+├── /setup
+└── /menu
 
-#### `/register_vehicle`
-**Flow:**
-1. Ask: "Enter license plate (ស្លាកលេខឡាន):"
-2. Ask: "Select vehicle type:" → Buttons: [🚚 Truck] [🚐 Van] [🏍️ Motorcycle] [🚗 Car]
-3. Ask: "Assign driver:" → Show list of drivers
-4. Save and confirm
+Level 2+ (Buttons):
+/setup
+├── [Setup Vehicle 🚗]
+└── [Setup Driver 👤]
+
+/menu
+├── [📍 Check In] (existing feature - with feature flag)
+├── [📋 Daily Operation]
+│   ├── [⛽ Add Fuel Record]
+│   └── [🚚 Add Trip Record]
+└── [📊 Report]
+    ├── [📅 Daily Report]
+    └── [📆 Monthly Report]
+```
 
 ---
 
-### Daily Operation Commands
+### `/register` (Existing)
+Employee registration - keep as is.
 
-#### `/record_trip`
+---
+
+### `/setup`
+**Setup Menu**
+
 **Flow:**
-1. Ask: "Select vehicle:" → Show list of vehicles
-2. Auto-record:
+1. User sends `/setup`
+2. Bot shows setup options:
+
+```
+⚙️ Setup Menu
+
+Choose what to setup:
+
+[Setup Vehicle 🚗] [Setup Driver 👤]
+
+Note: Set up vehicles first, then drivers
+```
+
+#### Setup Driver Flow (Button: "Setup Driver 👤")
+**Flow:**
+1. User clicks "Setup Driver 👤"
+2. Ask: "Enter driver name:"
+3. Ask: "Enter phone number:"
+4. Ask: "Assign to vehicle:" → Show list of vehicles
+5. Save and confirm (role defaults to DRIVER)
+
+**Note:** Vehicles should be set up first before adding drivers.
+
+#### Setup Vehicle Flow (Button: "Setup Vehicle 🚗")
+**Flow:**
+1. User clicks "Setup Vehicle 🚗"
+2. Ask: "Enter license plate (ស្លាកលេខឡាន):"
+3. Save and confirm
+
+**Note:** Driver will be assigned when creating the driver.
+
+---
+
+### `/menu`
+**Main Menu**
+
+**Flow:**
+1. User sends `/menu`
+2. Bot shows main menu:
+
+```
+🏠 Main Menu
+
+[📍 Check In]
+
+📋 Daily Operation
+[⛽ Add Fuel Record] [🚚 Add Trip Record]
+
+📊 Report
+[📅 Daily Report] [📆 Monthly Report]
+```
+
+**Note:** The "📍 Check In" button has a feature flag to enable/disable per group.
+
+---
+
+#### Add Fuel Record (Button: "⛽ Add Fuel Record")
+**Flow:**
+1. User clicks "⛽ Add Fuel Record"
+2. Ask: "Select vehicle:" → Show list of vehicles
+3. Ask: "Enter liters:"
+4. Ask: "Enter cost (រៀល)/(Dollar):"
+5. Ask: "Upload receipt photo (optional):" → Option: [Skip ⏭️]
+6. Save and confirm
+
+**Example:**
+```
+⛽ Fuel recorded for PP-1234
+Date: 2025-12-03
+Liters: 50L
+Cost: 250,000 រៀល
+Receipt: ✅ Uploaded
+
+[Back to Menu 🏠]
+```
+
+---
+
+#### Add Trip Record (Button: "🚚 Add Trip Record")
+**Flow:**
+1. User clicks "🚚 Add Trip Record"
+2. Ask: "Select vehicle:" → Show list of vehicles
+3. Auto-record:
    - Current date
    - Auto-increment trip number for today
    - Assigned driver
-3. Confirm: "Trip #X recorded for [plate]"
+4. Confirm with back button
 
 **Example:**
 ```
@@ -115,57 +208,17 @@ Date: 2025-12-03
 Time: 14:30
 
 Total trips today: 3
-```
 
-#### `/record_fuel`
-**Flow:**
-1. Ask: "Select vehicle:" → Show list of vehicles
-2. Ask: "Enter liters:"
-3. Ask: "Enter cost (រៀល):"
-4. Ask: "Upload receipt photo (optional):" → Option: [Skip ⏭️]
-5. Save and confirm
-
-**Example:**
-```
-⛽ Fuel recorded for PP-1234
-Date: 2025-12-03
-Liters: 50L
-Cost: 250,000 រៀល
-Receipt: ✅ Uploaded
-```
-
-#### `/today`
-**Quick Daily Overview**
-
-**Flow:**
-1. User sends command
-2. Bot immediately shows today's summary
-
-**Example:**
-```
-📊 Today's Summary (2025-12-03)
-════════════════════════════
-
-🚚 PP-1234 (Sok)
-   Trips: 5
-   Fuel: 50L (250,000 រៀល)
-
-🚐 2A-5678 (Dara)
-   Trips: 3
-   Fuel: 30L (150,000 រៀល)
-
-────────────────────────────
-Total Trips: 8
-Total Fuel: 80L
-Total Cost: 400,000 រៀល
+[Back to Menu 🏠]
 ```
 
 ---
 
-### Report Commands
+#### Daily Report (Button: "📅 Daily Report")
+**Flow:**
+1. User clicks "📅 Daily Report"
+2. Bot shows today's report:
 
-#### `/report_daily` or `/report_daily [YYYY-MM-DD]`
-**Output:**
 ```
 📊 Daily Report - 2025-12-03
 ════════════════════════════
@@ -184,10 +237,16 @@ Total Fuel: 80L
 Total Cost: 400,000 រៀល
 
 [Export Excel 📊] [Export PDF 📄]
+[📆 View Other Date] [Back to Menu 🏠]
 ```
 
-#### `/report_monthly` or `/report_monthly [YYYY-MM]`
-**Output:**
+---
+
+#### Monthly Report (Button: "📆 Monthly Report")
+**Flow:**
+1. User clicks "📆 Monthly Report"
+2. Bot shows current month report:
+
 ```
 📊 Monthly Report - December 2025
 ═════════════════════════════════
@@ -214,13 +273,27 @@ Total Trips: 195
 Total Fuel: 1,630L
 Total Cost: 8,150,000 រៀល
 
-[Export Excel 📊] [Export PDF 📄] [View Performance 📈]
+[Export Excel 📊] [Export PDF 📄]
+[📈 Vehicle Performance] [Back to Menu 🏠]
 ```
 
-#### `/report_vehicle [license_plate]`
-**Vehicle Performance Analytics**
+---
 
-**Output:**
+#### Vehicle Performance (Button: "📈 Vehicle Performance")
+**Flow:**
+1. User clicks "📈 Vehicle Performance"
+2. Bot shows vehicle selection:
+   ```
+   Select vehicle to view performance:
+
+   [🚚 PP-1234 (Sok)]
+   [🚐 2A-5678 (Dara)]
+
+   [Back to Menu 🏠]
+   ```
+3. User selects vehicle
+4. Bot shows performance report:
+
 ```
 📊 Vehicle Performance - PP-1234
 ═════════════════════════════════
@@ -255,6 +328,7 @@ Nov 28: 3 trips | 30L | 150,000 រៀល
 Nov 27: 5 trips | 45L | 225,000 រៀល
 
 [Export Excel 📊] [Export PDF 📄]
+[Back to Menu 🏠]
 ```
 
 ---
@@ -262,26 +336,26 @@ Nov 27: 5 trips | 45L | 225,000 រៀល
 ## 3. Database Schema
 
 ```sql
--- Drivers
-CREATE TABLE drivers (
-    id UUID PRIMARY KEY,
-    group_id UUID NOT NULL REFERENCES groups(id),
-    name VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    role VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(group_id, phone)
-);
-
--- Vehicles
+-- Vehicles (created first)
 CREATE TABLE vehicles (
     id UUID PRIMARY KEY,
     group_id UUID NOT NULL REFERENCES groups(id),
     license_plate VARCHAR(20) NOT NULL,
     vehicle_type VARCHAR(20) NOT NULL,
-    assigned_driver_id UUID REFERENCES drivers(id),
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(group_id, license_plate)
+);
+
+-- Drivers (created after vehicles, assigned to vehicle)
+CREATE TABLE drivers (
+    id UUID PRIMARY KEY,
+    group_id UUID NOT NULL REFERENCES groups(id),
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'DRIVER',
+    assigned_vehicle_id UUID REFERENCES vehicles(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(group_id, phone)
 );
 
 -- Trips
@@ -356,8 +430,10 @@ src/
 │
 └── presentation/
     └── handlers/
-        ├── vehicle_handler.py (combines all vehicle-related commands)
-        └── vehicle_report_handler.py
+        ├── menu_handler.py (handles /menu command and navigation)
+        ├── setup_handler.py (handles /setup command and submenus)
+        ├── vehicle_handler.py (trip and fuel recording logic)
+        └── report_handler.py (all report generation)
 ```
 
 ---
@@ -365,29 +441,84 @@ src/
 ## 5. Conversation States
 
 ```python
-# Driver registration
-REGISTER_DRIVER_NAME = 1
-REGISTER_DRIVER_PHONE = 2
-REGISTER_DRIVER_ROLE = 3
+# Menu states
+MAIN_MENU = 0
+SETUP_MENU = 1
+DAILY_OPERATION_MENU = 2
+REPORT_MENU = 3
 
-# Vehicle registration
-REGISTER_VEHICLE_PLATE = 10
-REGISTER_VEHICLE_TYPE = 11
-REGISTER_VEHICLE_DRIVER = 12
+# Setup - Vehicle registration (comes first)
+SETUP_VEHICLE_PLATE = 10
+SETUP_VEHICLE_TYPE = 11
 
-# Trip recording
-RECORD_TRIP_SELECT_VEHICLE = 20
+# Setup - Driver registration (comes after vehicles)
+SETUP_DRIVER_NAME = 20
+SETUP_DRIVER_PHONE = 21
+SETUP_DRIVER_VEHICLE = 22  # Select vehicle to assign
 
-# Fuel recording
-RECORD_FUEL_SELECT_VEHICLE = 30
-RECORD_FUEL_LITERS = 31
-RECORD_FUEL_COST = 32
-RECORD_FUEL_PHOTO = 33
+# Daily Operation - Trip recording
+RECORD_TRIP_SELECT_VEHICLE = 30
+
+# Daily Operation - Fuel recording
+RECORD_FUEL_SELECT_VEHICLE = 40
+RECORD_FUEL_LITERS = 41
+RECORD_FUEL_COST = 42
+RECORD_FUEL_PHOTO = 43
+
+# Reports
+REPORT_DAILY_SELECT_DATE = 50
+REPORT_MONTHLY_SELECT_MONTH = 51
+REPORT_VEHICLE_SELECT = 52
 ```
 
 ---
 
-## 6. Implementation Steps
+## 6. Feature Flags
+
+### Check-In Feature Toggle
+
+The "📍 Check In" button in the `/menu` command should have a feature flag to enable/disable it per group.
+
+**Implementation:**
+```python
+# In Group entity or settings table
+Group:
+  - checkin_enabled: Boolean (default: True)
+
+# Or in a separate feature_flags table
+FeatureFlags:
+  - group_id: UUID
+  - feature_name: String
+  - enabled: Boolean
+```
+
+**Usage:**
+```python
+# When showing /menu
+def show_menu(group_id):
+    buttons = []
+
+    # Check if check-in is enabled for this group
+    if is_feature_enabled(group_id, 'checkin'):
+        buttons.append([InlineKeyboardButton("📍 Check In", callback_data="checkin")])
+
+    # Always show other features
+    buttons.append([
+        InlineKeyboardButton("⛽ Add Fuel Record", callback_data="add_fuel"),
+        InlineKeyboardButton("🚚 Add Trip Record", callback_data="add_trip")
+    ])
+    ...
+```
+
+**Admin Command (Optional):**
+```
+/admin_toggle_feature checkin
+→ Toggle check-in feature on/off for current group
+```
+
+---
+
+## 7. Implementation Steps
 
 ### Step 1: Database Setup
 - [ ] Create migration files for 4 tables
@@ -407,31 +538,39 @@ RECORD_FUEL_PHOTO = 33
 - [ ] Implement photo storage service (S3 or similar)
 
 ### Step 5: Presentation Layer
-- [ ] Create vehicle_handler.py with conversation flows
-- [ ] Create vehicle_report_handler.py for reports
-- [ ] Register handlers in main.py
+- [ ] Create menu_handler.py (/menu command with navigation)
+- [ ] Create setup_handler.py (/setup command with submenus)
+- [ ] Create vehicle_handler.py (trip and fuel recording)
+- [ ] Create report_handler.py (all reports)
+- [ ] Implement feature flag for check-in button
+- [ ] Register all handlers in main.py
 
 ### Step 6: Testing
-- [ ] Test driver registration
-- [ ] Test vehicle registration
-- [ ] Test trip recording (verify auto-increment)
-- [ ] Test fuel recording
-- [ ] Test daily report
-- [ ] Test monthly report
+- [ ] Test /setup command navigation
+- [ ] Test driver registration via Setup menu
+- [ ] Test vehicle registration via Setup menu
+- [ ] Test /menu command navigation
+- [ ] Test trip recording via Daily Operation menu (verify auto-increment)
+- [ ] Test fuel recording via Daily Operation menu (with photo upload)
+- [ ] Test daily report via Report menu
+- [ ] Test monthly report via Report menu
+- [ ] Test vehicle performance report
+- [ ] Test feature flag (check-in button toggle)
+- [ ] Test Excel and PDF export
 
 ---
 
-## 7. Validation Rules
+## 8. Validation Rules
 
 **Driver:**
 - Name: Required, max 100 chars
 - Phone: Required, unique per group
-- Role: Must be DRIVER, HELPER, or MANAGER
+- Role: Auto-set to DRIVER (Phase 1)
+- Vehicle: Optional (can assign later)
 
 **Vehicle:**
 - License plate: Required, unique per group, max 20 chars
 - Vehicle type: Required, must be TRUCK, VAN, MOTORCYCLE, or CAR
-- Driver: Must exist
 
 **Trip:**
 - Vehicle: Must exist
@@ -444,7 +583,7 @@ RECORD_FUEL_PHOTO = 33
 
 ---
 
-## 8. Business Logic
+## 9. Business Logic
 
 ### Auto-increment Trip Numbers
 ```python
@@ -487,17 +626,18 @@ These features are NOT in Phase 1 but can be added later:
 ## Summary
 
 **Phase 1 Scope:**
-- Driver registration (Name, Phone, Role)
-- Vehicle registration (License plate, Type, Driver assignment)
+- Vehicle registration first (License plate, Type)
+- Driver registration (Name, Phone, assign to Vehicle) - Role defaults to DRIVER
 - Trip recording (auto-increment counter per vehicle per day)
 - Fuel tracking (liters, cost, receipt photo upload)
-- Quick daily overview (/today command)
-- Daily and monthly reports
+- Daily and monthly reports via /menu
 - Vehicle performance analytics
 - Excel and PDF export functionality
-- All operations via Telegram bot commands
+- Menu-driven navigation (/setup, /menu)
+- Feature flag for check-in button
 
 **Out of Scope for Phase 1:**
+- Multiple driver roles (HELPER, MANAGER) - Phase 2
 - Complex trip details (destination, distance, load) - Phase 2
 - GPS/location tracking - Phase 2
 - Maintenance tracking - Phase 2
