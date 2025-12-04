@@ -24,6 +24,39 @@ from ...presentation.handlers.salary_advance_handler import (
     WAITING_ADVANCE_AMOUNT,
     WAITING_ADVANCE_NOTE
 )
+from ...presentation.handlers.setup_handler import (
+    SetupHandler,
+    SETUP_MENU,
+    SETUP_VEHICLE_PLATE,
+    SETUP_VEHICLE_TYPE,
+    SETUP_DRIVER_NAME,
+    SETUP_DRIVER_PHONE,
+    SETUP_DRIVER_VEHICLE
+)
+from ...presentation.handlers.menu_handler import MenuHandler
+from ...presentation.handlers.vehicle_operations_handler import (
+    VehicleOperationsHandler,
+    SELECT_VEHICLE_FOR_TRIP,
+    SELECT_VEHICLE_FOR_FUEL,
+    ENTER_FUEL_LITERS,
+    ENTER_FUEL_COST,
+    UPLOAD_FUEL_RECEIPT
+)
+from ...presentation.handlers.report_handler import (
+    ReportHandler,
+    SELECT_VEHICLE_FOR_PERFORMANCE
+)
+from ...infrastructure.persistence.vehicle_repository_impl import VehicleRepository
+from ...infrastructure.persistence.driver_repository_impl import DriverRepository
+from ...infrastructure.persistence.trip_repository_impl import TripRepository
+from ...infrastructure.persistence.fuel_record_repository_impl import FuelRecordRepository
+from ...application.use_cases.register_vehicle import RegisterVehicleUseCase
+from ...application.use_cases.register_driver import RegisterDriverUseCase
+from ...application.use_cases.record_trip import RecordTripUseCase
+from ...application.use_cases.record_fuel import RecordFuelUseCase
+from ...application.use_cases.get_daily_report import GetDailyReportUseCase
+from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
+from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
 
 class BotApplication:
     def __init__(self):
@@ -44,11 +77,16 @@ class BotApplication:
         from ...infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
 
         return (
+            session,
             EmployeeRepository(session),
             CheckInRepository(session),
             SalaryAdvanceRepository(session),
             GroupRepository(session),
-            EmployeeGroupRepository(session)
+            EmployeeGroupRepository(session),
+            VehicleRepository(session),
+            DriverRepository(session),
+            TripRepository(session),
+            FuelRecordRepository(session)
         )
 
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE, employee_name: str = None):
@@ -142,7 +180,7 @@ class BotApplication:
         async def start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
 
-            employee_repo, _, _, _, _ = self._get_repositories()
+            session, employee_repo, _, _, _, _, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
@@ -151,8 +189,10 @@ class BotApplication:
             # Create a wrapper for show_menu that skips in groups
             async def show_menu_or_skip(update, context, employee_name=None):
                 if chat.type in ['group', 'supergroup']:
+                    session.close()
                     return
                 await self.show_menu(update, context, employee_name)
+                session.close()
 
             return await employee_handler.start(update, context, show_menu_or_skip)
 
@@ -170,8 +210,9 @@ class BotApplication:
                 return
 
             # Check if employee is registered
-            employee_repo, _, _, _, _ = self._get_repositories()
+            session, employee_repo, _, _, _, _, _, _, _, _ = self._get_repositories()
             employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(str(user.id))
+            session.close()
 
             if not employee:
                 await message.reply_text(
@@ -179,15 +220,9 @@ class BotApplication:
                 )
                 return
 
-            # Show menu in group
-            keyboard = [
-                [InlineKeyboardButton("📍 Check In", url="https://t.me/OALocal_bot/checkin")],
-            ]
-
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            menu_text = f"Hello {employee.name}!\nPlease select an option:"
-
-            await message.reply_text(menu_text, reply_markup=reply_markup)
+            # Show menu using MenuHandler (with check-in enabled by default)
+            menu_handler = MenuHandler(check_in_enabled=True)
+            await menu_handler.show_menu(update, context)
 
         async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             from ...application.use_cases.register_group import RegisterGroupUseCase
@@ -202,20 +237,21 @@ class BotApplication:
                 return
 
             # Register the group
-            _, _, _, group_repo, _ = self._get_repositories()
+            session, _, _, _, group_repo, _, _, _, _, _ = self._get_repositories()
             register_group_use_case = RegisterGroupUseCase(group_repo)
 
             group = register_group_use_case.execute(
                 chat_id=str(chat.id),
                 name=chat.title or "Unknown Group"
             )
+            session.close()
 
             await message.reply_text(
                 f"✅ Group '{group.name}' has been registered successfully!"
             )
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, _, _, _ = self._get_repositories()
+            session, employee_repo, _, _, _, _, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
@@ -226,13 +262,16 @@ class BotApplication:
             # In groups, don't show menu
             if chat.type in ['group', 'supergroup']:
                 async def skip_menu(update, context, employee_name=None):
-                    pass
-                return await employee_handler.register(update, context, skip_menu)
+                    session.close()
+                result = await employee_handler.register(update, context, skip_menu)
+                return result
             else:
-                return await employee_handler.register(update, context, self.show_menu)
+                result = await employee_handler.register(update, context, self.show_menu)
+                session.close()
+                return result
 
         async def register_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, _, _, _ = self._get_repositories()
+            session, employee_repo, _, _, _, _, _, _, _, _ = self._get_repositories()
             employee_handler = EmployeeHandler(
                 RegisterEmployeeUseCase(employee_repo),
                 GetEmployeeUseCase(employee_repo)
@@ -240,7 +279,7 @@ class BotApplication:
 
             # In groups, don't show menu after registration
             async def skip_menu(update, context, employee_name=None):
-                pass
+                session.close()
 
             return await employee_handler.start(update, context, skip_menu)
 
@@ -257,7 +296,7 @@ class BotApplication:
 
         # Salary advance handlers
         async def salary_advance_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
+            session, employee_repo, _, salary_advance_repo, _, _, _, _, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
@@ -265,28 +304,272 @@ class BotApplication:
                 await update.callback_query.answer()
                 await update.callback_query.edit_message_reply_markup(reply_markup=None)
                 context.chat_data['menu_message_id'] = update.callback_query.message.message_id
-            return await salary_advance_handler.start(update, context)
+            result = await salary_advance_handler.start(update, context)
+            session.close()
+            return result
 
         async def salary_advance_amount_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
+            session, employee_repo, _, salary_advance_repo, _, _, _, _, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
-            return await salary_advance_handler.get_amount(update, context)
+            result = await salary_advance_handler.get_amount(update, context)
+            session.close()
+            return result
 
         async def salary_advance_note_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
+            session, employee_repo, _, salary_advance_repo, _, _, _, _, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
-            return await salary_advance_handler.get_note(update, context)
+            result = await salary_advance_handler.get_note(update, context)
+            session.close()
+            return result
 
         async def salary_advance_save_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            employee_repo, _, salary_advance_repo, _, _ = self._get_repositories()
+            session, employee_repo, _, salary_advance_repo, _, _, _, _, _, _ = self._get_repositories()
             salary_advance_handler = SalaryAdvanceHandler(
                 RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
             )
-            return await salary_advance_handler.save(update, context, self.show_menu)
+            result = await salary_advance_handler.save(update, context, self.show_menu)
+            session.close()
+            return result
+
+        # ==================== Vehicle Logistics Handlers ====================
+
+        # Setup handlers
+        async def setup_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            from ...application.use_cases.register_group import RegisterGroupUseCase
+
+            session, _, _, _, group_repo, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                register_group_use_case=RegisterGroupUseCase(group_repo),
+                vehicle_repository=vehicle_repo,
+                driver_repository=driver_repo
+            )
+            result = await setup_handler.setup_menu(update, context)
+            session.close()
+            return result
+
+        async def setup_vehicle_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.start_vehicle_setup(update, context)
+            session.close()
+            return result
+
+        async def setup_vehicle_plate_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_vehicle_plate(update, context)
+            session.close()
+            return result
+
+        async def setup_vehicle_type_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_vehicle_type(update, context)
+            session.close()
+            return result
+
+        async def setup_driver_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.start_driver_setup(update, context)
+            session.close()
+            return result
+
+        async def setup_driver_name_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_driver_name(update, context)
+            session.close()
+            return result
+
+        async def setup_driver_phone_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_driver_phone(update, context)
+            session.close()
+            return result
+
+        async def setup_driver_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_driver_vehicle(update, context)
+            session.close()
+            return result
+
+        # Vehicle operations handlers
+        async def start_trip_recording_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordFuelUseCase(None, vehicle_repo),  # fuel_repo passed later
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.start_trip_recording(update, context)
+            session.close()
+            return result
+
+        async def record_trip_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordFuelUseCase(None, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.record_trip(update, context)
+            session.close()
+            return result
+
+        async def start_fuel_recording_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordFuelUseCase(fuel_repo, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.start_fuel_recording(update, context)
+            session.close()
+            return result
+
+        async def select_fuel_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordFuelUseCase(fuel_repo, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.select_fuel_vehicle(update, context)
+            session.close()
+            return result
+
+        async def receive_fuel_liters_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordFuelUseCase(fuel_repo, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.receive_fuel_liters(update, context)
+            session.close()
+            return result
+
+        async def receive_fuel_cost_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordFuelUseCase(fuel_repo, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.receive_fuel_cost(update, context)
+            session.close()
+            return result
+
+        async def complete_fuel_record_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordFuelUseCase(fuel_repo, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.complete_fuel_record(update, context)
+            session.close()
+            return result
+
+        # Report handlers
+        async def show_daily_report_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
+            report_handler = ReportHandler(
+                GetDailyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetMonthlyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetVehiclePerformanceUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                vehicle_repo, driver_repo
+            )
+            await report_handler.show_daily_report(update, context)
+            session.close()
+
+        async def show_monthly_report_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
+            report_handler = ReportHandler(
+                GetDailyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetMonthlyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetVehiclePerformanceUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                vehicle_repo, driver_repo
+            )
+            await report_handler.show_monthly_report(update, context)
+            session.close()
+
+        async def start_vehicle_performance_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
+            report_handler = ReportHandler(
+                GetDailyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetMonthlyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetVehiclePerformanceUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await report_handler.start_vehicle_performance(update, context)
+            session.close()
+            return result
+
+        async def show_vehicle_performance_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
+            report_handler = ReportHandler(
+                GetDailyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetMonthlyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetVehiclePerformanceUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await report_handler.show_vehicle_performance(update, context)
+            session.close()
+            return result
+
+        async def export_placeholder_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
+            report_handler = ReportHandler(
+                GetDailyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetMonthlyReportUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                GetVehiclePerformanceUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                vehicle_repo, driver_repo
+            )
+            await report_handler.export_placeholder(update, context)
+            session.close()
+
+        async def back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle back to menu button"""
+            menu_handler = MenuHandler(check_in_enabled=True)
+            await menu_handler.show_menu(update, context)
 
         # Registration conversation handler
         registration_conv = ConversationHandler(
@@ -320,6 +603,84 @@ class BotApplication:
             fallbacks=[CommandHandler("cancel", self.cancel)],
         )
 
+        # Setup conversation handler
+        setup_conv = ConversationHandler(
+            entry_points=[
+                CommandHandler("setup", setup_menu_wrapper),
+            ],
+            states={
+                SETUP_MENU: [
+                    CallbackQueryHandler(setup_vehicle_start_wrapper, pattern="^setup_vehicle$"),
+                    CallbackQueryHandler(setup_driver_start_wrapper, pattern="^setup_driver$"),
+                ],
+                SETUP_VEHICLE_PLATE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_plate_wrapper)
+                ],
+                SETUP_VEHICLE_TYPE: [
+                    CallbackQueryHandler(setup_vehicle_type_wrapper, pattern="^vtype_")
+                ],
+                SETUP_DRIVER_NAME: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_name_wrapper)
+                ],
+                SETUP_DRIVER_PHONE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_phone_wrapper)
+                ],
+                SETUP_DRIVER_VEHICLE: [
+                    CallbackQueryHandler(setup_driver_vehicle_wrapper, pattern="^assign_vehicle_")
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+        )
+
+        # Trip recording conversation handler
+        trip_conv = ConversationHandler(
+            entry_points=[
+                CallbackQueryHandler(start_trip_recording_wrapper, pattern="^add_trip$"),
+            ],
+            states={
+                SELECT_VEHICLE_FOR_TRIP: [
+                    CallbackQueryHandler(record_trip_wrapper, pattern="^trip_vehicle_")
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+        )
+
+        # Fuel recording conversation handler
+        fuel_conv = ConversationHandler(
+            entry_points=[
+                CallbackQueryHandler(start_fuel_recording_wrapper, pattern="^add_fuel$"),
+            ],
+            states={
+                SELECT_VEHICLE_FOR_FUEL: [
+                    CallbackQueryHandler(select_fuel_vehicle_wrapper, pattern="^fuel_vehicle_")
+                ],
+                ENTER_FUEL_LITERS: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fuel_liters_wrapper)
+                ],
+                ENTER_FUEL_COST: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fuel_cost_wrapper)
+                ],
+                UPLOAD_FUEL_RECEIPT: [
+                    MessageHandler(filters.PHOTO, complete_fuel_record_wrapper),
+                    CallbackQueryHandler(complete_fuel_record_wrapper, pattern="^fuel_skip_photo$"),
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+        )
+
+        # Vehicle performance conversation handler
+        vehicle_performance_conv = ConversationHandler(
+            entry_points=[
+                CallbackQueryHandler(start_vehicle_performance_wrapper, pattern="^report_vehicle_performance$"),
+            ],
+            states={
+                SELECT_VEHICLE_FOR_PERFORMANCE: [
+                    CallbackQueryHandler(show_vehicle_performance_wrapper, pattern="^perf_vehicle_")
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+        )
+
         # Add handlers
         self.app.add_handler(CommandHandler("menu", menu_wrapper))
         self.app.add_handler(CommandHandler("register_group", register_group_wrapper))
@@ -327,6 +688,22 @@ class BotApplication:
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
         self.app.add_handler(request_advance_handler)
         self.app.add_handler(salary_advance_conv)
+
+        # Add vehicle logistics handlers
+        self.app.add_handler(setup_conv)
+        self.app.add_handler(trip_conv)
+        self.app.add_handler(fuel_conv)
+        self.app.add_handler(vehicle_performance_conv)
+
+        # Add report callback handlers
+        self.app.add_handler(CallbackQueryHandler(show_daily_report_wrapper, pattern="^report_daily$"))
+        self.app.add_handler(CallbackQueryHandler(show_monthly_report_wrapper, pattern="^report_monthly$"))
+
+        # Add export placeholder handlers
+        self.app.add_handler(CallbackQueryHandler(export_placeholder_wrapper, pattern="^export_.*"))
+
+        # Add back to menu handler
+        self.app.add_handler(CallbackQueryHandler(back_to_menu_wrapper, pattern="^back_to_menu$"))
 
     def run(self):
         """Start the bot"""
