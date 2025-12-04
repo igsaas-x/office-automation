@@ -28,8 +28,8 @@ from ...presentation.handlers.setup_handler import (
     SetupHandler,
     SETUP_MENU,
     SETUP_VEHICLE_PLATE,
-    SETUP_VEHICLE_TYPE,
     SETUP_DRIVER_NAME,
+    SETUP_DRIVER_ROLE,
     SETUP_DRIVER_PHONE,
     SETUP_DRIVER_VEHICLE
 )
@@ -220,8 +220,8 @@ class BotApplication:
                 )
                 return
 
-            # Show menu using MenuHandler (with check-in enabled by default)
-            menu_handler = MenuHandler(check_in_enabled=True)
+            # Show menu using MenuHandler (with check-in disabled)
+            menu_handler = MenuHandler(check_in_enabled=False)
             await menu_handler.show_menu(update, context)
 
         async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -375,17 +375,6 @@ class BotApplication:
             session.close()
             return result
 
-        async def setup_vehicle_type_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
-            result = await setup_handler.receive_vehicle_type(update, context)
-            session.close()
-            return result
-
         async def setup_driver_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
             setup_handler = SetupHandler(
@@ -405,6 +394,17 @@ class BotApplication:
                 None, vehicle_repo, driver_repo
             )
             result = await setup_handler.receive_driver_name(update, context)
+            session.close()
+            return result
+
+        async def setup_driver_role_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+            setup_handler = SetupHandler(
+                RegisterVehicleUseCase(vehicle_repo),
+                RegisterDriverUseCase(driver_repo, vehicle_repo),
+                None, vehicle_repo, driver_repo
+            )
+            result = await setup_handler.receive_driver_role(update, context)
             session.close()
             return result
 
@@ -568,8 +568,18 @@ class BotApplication:
 
         async def back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle back to menu button"""
-            menu_handler = MenuHandler(check_in_enabled=True)
+            menu_handler = MenuHandler(check_in_enabled=False)
             await menu_handler.show_menu(update, context)
+
+        async def show_daily_operation_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle daily operation menu button"""
+            menu_handler = MenuHandler(check_in_enabled=False)
+            await menu_handler.show_daily_operation_menu(update, context)
+
+        async def show_report_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle report menu button"""
+            menu_handler = MenuHandler(check_in_enabled=False)
+            await menu_handler.show_report_menu(update, context)
 
         # Registration conversation handler
         registration_conv = ConversationHandler(
@@ -616,11 +626,11 @@ class BotApplication:
                 SETUP_VEHICLE_PLATE: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_plate_wrapper)
                 ],
-                SETUP_VEHICLE_TYPE: [
-                    CallbackQueryHandler(setup_vehicle_type_wrapper, pattern="^vtype_")
-                ],
                 SETUP_DRIVER_NAME: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_name_wrapper)
+                ],
+                SETUP_DRIVER_ROLE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_role_wrapper)
                 ],
                 SETUP_DRIVER_PHONE: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_phone_wrapper)
@@ -704,6 +714,10 @@ class BotApplication:
 
         # Add back to menu handler
         self.app.add_handler(CallbackQueryHandler(back_to_menu_wrapper, pattern="^back_to_menu$"))
+
+        # Add submenu handlers
+        self.app.add_handler(CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$"))
+        self.app.add_handler(CallbackQueryHandler(show_report_menu_wrapper, pattern="^menu_report$"))
 
     def run(self):
         """Start the bot"""

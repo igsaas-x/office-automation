@@ -19,21 +19,46 @@ class MenuHandler:
         if self.check_in_enabled:
             keyboard.append([InlineKeyboardButton("📍 Check In", callback_data="checkin")])
 
-        # Daily Operation section
-        keyboard.append([
-            InlineKeyboardButton("⛽ Add Fuel Record", callback_data="add_fuel"),
-            InlineKeyboardButton("🚚 Add Trip Record", callback_data="add_trip")
-        ])
-
-        # Report section
-        keyboard.append([
-            InlineKeyboardButton("📅 Daily Report", callback_data="report_daily"),
-            InlineKeyboardButton("📆 Monthly Report", callback_data="report_monthly")
-        ])
+        # Main menu buttons with submenus
+        keyboard.append([InlineKeyboardButton("📋 Daily Operation", callback_data="menu_daily_operation")])
+        keyboard.append([InlineKeyboardButton("📊 Report", callback_data="menu_report")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message_text = "🏠 Main Menu\n\nChoose an option:"
+
+        if update.callback_query:
+            await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+        else:
+            await update.message.reply_text(message_text, reply_markup=reply_markup)
+
+    async def show_daily_operation_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show daily operation submenu"""
+        keyboard = [
+            [InlineKeyboardButton("⛽ Add Fuel Record", callback_data="add_fuel")],
+            [InlineKeyboardButton("🚚 Add Trip Record", callback_data="add_trip")],
+            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        message_text = "📋 Daily Operation\n\nChoose an option:"
+
+        if update.callback_query:
+            await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+        else:
+            await update.message.reply_text(message_text, reply_markup=reply_markup)
+
+    async def show_report_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show report submenu"""
+        keyboard = [
+            [InlineKeyboardButton("📅 Daily Report", callback_data="report_daily")],
+            [InlineKeyboardButton("📆 Monthly Report", callback_data="report_monthly")],
+            [InlineKeyboardButton("📈 Vehicle Performance", callback_data="report_vehicle_performance")],
+            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        message_text = "📊 Report\n\nChoose an option:"
 
         if update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)

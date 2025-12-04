@@ -12,11 +12,11 @@ from ...domain.repositories.driver_repository import IDriverRepository
 SETUP_MENU = 0
 # Vehicle registration states
 SETUP_VEHICLE_PLATE = 10
-SETUP_VEHICLE_TYPE = 11
 # Driver registration states
 SETUP_DRIVER_NAME = 20
-SETUP_DRIVER_PHONE = 21
-SETUP_DRIVER_VEHICLE = 22
+SETUP_DRIVER_ROLE = 21
+SETUP_DRIVER_PHONE = 22
+SETUP_DRIVER_VEHICLE = 23
 
 class SetupHandler:
     def __init__(
@@ -84,36 +84,8 @@ class SetupHandler:
         return SETUP_VEHICLE_PLATE
 
     async def receive_vehicle_plate(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Receive vehicle license plate"""
+        """Receive vehicle license plate and save vehicle"""
         license_plate = update.message.text.strip()
-
-        # Store license plate
-        context.user_data['vehicle_license_plate'] = license_plate
-
-        # Show vehicle type options
-        keyboard = [
-            [InlineKeyboardButton("🚚 Truck", callback_data="vtype_TRUCK")],
-            [InlineKeyboardButton("🚐 Van", callback_data="vtype_VAN")],
-            [InlineKeyboardButton("🏍️ Motorcycle", callback_data="vtype_MOTORCYCLE")],
-            [InlineKeyboardButton("🚗 Car", callback_data="vtype_CAR")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await update.message.reply_text(
-            f"License Plate: {license_plate}\n\n"
-            "Select vehicle type:",
-            reply_markup=reply_markup
-        )
-
-        return SETUP_VEHICLE_TYPE
-
-    async def receive_vehicle_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Receive vehicle type and save vehicle"""
-        query = update.callback_query
-        await query.answer()
-
-        vehicle_type = query.data.replace("vtype_", "")
-        license_plate = context.user_data.get('vehicle_license_plate')
 
         # Get group from database to get its ID
         from ...infrastructure.persistence.database import database
@@ -124,30 +96,28 @@ class SetupHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['setup_group_id']))
 
         if not group:
-            await query.edit_message_text("❌ Error: Group not found. Please try again.")
+            await update.message.reply_text("❌ Error: Group not found. Please try again.")
             session.close()
             return ConversationHandler.END
 
         try:
-            # Register vehicle
+            # Register vehicle with default type "TRUCK"
             request = RegisterVehicleRequest(
                 group_id=group.id,
                 license_plate=license_plate,
-                vehicle_type=vehicle_type
+                vehicle_type="TRUCK"  # Default type
             )
             response = self.register_vehicle_use_case.execute(request)
 
             # Show success message
-            type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
-            await query.edit_message_text(
+            await update.message.reply_text(
                 f"✅ Vehicle registered successfully!\n\n"
-                f"License Plate: {response.license_plate}\n"
-                f"Type: {type_emoji.get(response.vehicle_type, '🚗')} {response.vehicle_type}\n\n"
+                f"License Plate: {response.license_plate}\n\n"
                 "You can now setup drivers and assign them to this vehicle."
             )
 
         except ValueError as e:
-            await query.edit_message_text(f"❌ Error: {str(e)}")
+            await update.message.reply_text(f"❌ Error: {str(e)}")
         finally:
             session.close()
 
@@ -174,6 +144,20 @@ class SetupHandler:
 
         await update.message.reply_text(
             f"Name: {driver_name}\n\n"
+            "Please enter the driver's role:\n"
+            "Example: Driver, Manager, Supervisor"
+        )
+
+        return SETUP_DRIVER_ROLE
+
+    async def receive_driver_role(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Receive driver role"""
+        driver_role = update.message.text.strip()
+        context.user_data['driver_role'] = driver_role
+
+        await update.message.reply_text(
+            f"Name: {context.user_data['driver_name']}\n"
+            f"Role: {driver_role}\n\n"
             "Please enter the driver's phone number:\n"
             "Example: 012345678"
         )
@@ -243,6 +227,7 @@ class SetupHandler:
             assigned_vehicle_id = int(query.data.replace("assign_vehicle_", ""))
 
         driver_name = context.user_data.get('driver_name')
+        driver_role = context.user_data.get('driver_role')
         driver_phone = context.user_data.get('driver_phone')
 
         # Get group from database
@@ -259,13 +244,13 @@ class SetupHandler:
             return ConversationHandler.END
 
         try:
-            # Register driver
+            # Register driver with role from user input
             request = RegisterDriverRequest(
                 group_id=group.id,
                 name=driver_name,
                 phone=driver_phone,
                 assigned_vehicle_id=assigned_vehicle_id,
-                role='DRIVER'
+                role=driver_role
             )
             response = self.register_driver_use_case.execute(request)
 
