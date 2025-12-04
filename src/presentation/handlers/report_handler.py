@@ -1,6 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
 from datetime import date, datetime
+from html import escape
 from ...application.use_cases.get_daily_report import GetDailyReportUseCase
 from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
 from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
@@ -58,59 +60,68 @@ class ReportHandler:
             report = self.daily_report_use_case.execute(group.id, today)
 
             # Format report message
-            message_text = (
-                f"📅 Daily Report - {report.date}\n\n"
-                f"📊 Summary:\n"
-                f"• Total Trips: {report.total_trips}\n"
-                f"• Total Fuel: {report.total_fuel_liters}L\n"
-                f"• Total Cost: {report.total_fuel_cost:,.0f} រៀល\n\n"
-            )
+            message_parts = [
+                f"📅 Daily Report - {escape(report.date)}",
+                "",
+                "📊 Summary:",
+                f"• Total Trips: {report.total_trips}",
+                f"• Total Fuel: {report.total_fuel_liters}L",
+                f"• Total Cost: {report.total_fuel_cost:,.0f} រៀល",
+                ""
+            ]
 
             if not report.vehicles:
-                message_text += "⚠️ No activity recorded for today."
+                message_parts.append("⚠️ No activity recorded for today.")
             else:
                 type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
 
                 for idx, vehicle_data in enumerate(report.vehicles):
                     emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
-                    message_text += (
-                        f"{emoji} {vehicle_data.license_plate}\n"
-                        f"  • Trips: {vehicle_data.trip_count}\n"
-                    )
+                    message_parts.append(f"{emoji} {escape(vehicle_data.license_plate)}")
+                    message_parts.append(f"  • Trips: {vehicle_data.trip_count}")
                     if vehicle_data.total_fuel_liters > 0:
-                        message_text += f"  • Fuel: {vehicle_data.total_fuel_liters}L ({vehicle_data.total_fuel_cost:,.0f} រៀល)\n"
+                        message_parts.append(
+                            f"  • Fuel: {vehicle_data.total_fuel_liters}L ({vehicle_data.total_fuel_cost:,.0f} រៀល)"
+                        )
                     if vehicle_data.driver_name:
-                        message_text += f"  • Driver: {vehicle_data.driver_name}\n"
+                        message_parts.append(f"  • Driver: {escape(vehicle_data.driver_name)}")
 
-                    # Trips for this vehicle
-                    message_text += "\n🛣️ Trips Today:\n"
                     vehicle_trips = [t for t in report.trips if t.vehicle_plate == vehicle_data.license_plate]
-                    if vehicle_trips:
-                        for trip in vehicle_trips:
-                            time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
-                            driver_part = f" - {trip.driver_name}" if trip.driver_name else ""
-                            message_text += f"• {trip.vehicle_plate}{driver_part}: Trip #{trip.trip_number} at {time_str}\n"
-                    else:
-                        message_text += "• None recorded\n"
+                    trip_lines = []
+                    for trip in vehicle_trips:
+                        time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
+                        trip_lines.append(f"Trip #{trip.trip_number} at {time_str}")
 
-                    # Fuel for this vehicle
-                    message_text += "\n⛽ Fuel Records:\n"
-                    vehicle_fuels = [f for f in report.fuel_records if f.vehicle_plate == vehicle_data.license_plate]
-                    if vehicle_fuels:
-                        for fuel in vehicle_fuels:
-                            time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
-                            message_text += f"• {fuel.vehicle_plate}: {fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}\n"
+                    message_parts.append("\n🛣️ Trips Today:")
+                    if trip_lines:
+                        message_parts.append(f"<pre>{escape('\n'.join(trip_lines))}</pre>")
                     else:
-                        message_text += "• None recorded\n"
+                        message_parts.append("<pre>None recorded</pre>")
+
+                    vehicle_fuels = [f for f in report.fuel_records if f.vehicle_plate == vehicle_data.license_plate]
+                    fuel_lines = []
+                    for fuel in vehicle_fuels:
+                        time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
+                        fuel_lines.append(
+                            f"{fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}"
+                        )
+
+                    message_parts.append("\n⛽ Fuel Records:")
+                    if fuel_lines:
+                        message_parts.append(f"<pre>{escape('\n'.join(fuel_lines))}</pre>")
+                    else:
+                        message_parts.append("<pre>None recorded</pre>")
 
                     if idx < len(report.vehicles) - 1:
-                        message_text += "\n\n"
+                        message_parts.append("")
+
+            message_text = "\n".join(message_parts)
 
             # Display report without buttons (end of session)
             if query:
-                await query.edit_message_text(message_text)
+                await query.edit_message_text(message_text, parse_mode=ParseMode.HTML)
             else:
-                await update.message.reply_text(message_text)
+                await update.message.reply_text(message_text, parse_mode=ParseMode.HTML)
 
         except Exception as e:
             error_message = f"❌ Error generating report: {str(e)}"
@@ -161,8 +172,7 @@ class ReportHandler:
             }
 
             message_text = (
-                f"📆 Monthly Report - {month_names[report.month]} {report.year}\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"📆 Monthly Report - {month_names[report.month]} {report.year}\n\n"
                 f"📊 Summary:\n"
                 f"• Total Vehicles: {report.total_vehicles}\n"
                 f"• Total Trips: {report.total_trips}\n"
@@ -307,8 +317,7 @@ class ReportHandler:
             emoji = type_emoji.get(report.vehicle_type, "🚗")
 
             message_text = (
-                f"📈 Vehicle Performance Report\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"📈 Vehicle Performance Report\n\n"
                 f"{emoji} {report.license_plate}\n"
             )
 
