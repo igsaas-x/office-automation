@@ -35,3 +35,8 @@ class IFuelRecordRepository(ABC):
     ) -> List[FuelRecord]:
         """Find all fuel records for a group within a date range."""
         pass
+
+    @abstractmethod
+    def has_records_for_vehicle(self, vehicle_id: int) -> bool:
+        """Check if any fuel records exist for the vehicle."""
+        pass

@@ -82,6 +82,12 @@ class TripRepository(ITripRepository):
         ).all()
         return [self._to_entity(t) for t in db_trips]
 
+    def has_trips_for_vehicle(self, vehicle_id: int) -> bool:
+        return self.session.query(TripModel.id).filter_by(vehicle_id=vehicle_id).first() is not None
+
+    def has_trips_for_driver(self, driver_id: int) -> bool:
+        return self.session.query(TripModel.id).filter_by(driver_id=driver_id).first() is not None
+
     def _to_entity(self, model: TripModel) -> Trip:
         return Trip(
             id=model.id,

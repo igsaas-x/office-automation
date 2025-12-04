@@ -71,6 +71,9 @@ class FuelRecordRepository(IFuelRecordRepository):
         ).all()
         return [self._to_entity(f) for f in db_fuels]
 
+    def has_records_for_vehicle(self, vehicle_id: int) -> bool:
+        return self.session.query(FuelRecordModel.id).filter_by(vehicle_id=vehicle_id).first() is not None
+
     def _to_entity(self, model: FuelRecordModel) -> FuelRecord:
         return FuelRecord(
             id=model.id,

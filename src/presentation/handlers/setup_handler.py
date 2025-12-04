@@ -3,6 +3,8 @@ from telegram.ext import ContextTypes, ConversationHandler
 from ...application.use_cases.register_vehicle import RegisterVehicleUseCase
 from ...application.use_cases.register_driver import RegisterDriverUseCase
 from ...application.use_cases.register_group import RegisterGroupUseCase
+from ...application.use_cases.delete_vehicle import DeleteVehicleUseCase
+from ...application.use_cases.delete_driver import DeleteDriverUseCase
 from ...application.dto.vehicle_dto import RegisterVehicleRequest
 from ...application.dto.driver_dto import RegisterDriverRequest
 from ...domain.repositories.vehicle_repository import IVehicleRepository
@@ -25,40 +27,61 @@ class SetupHandler:
         register_driver_use_case: RegisterDriverUseCase,
         register_group_use_case: RegisterGroupUseCase,
         vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository
+        driver_repository: IDriverRepository,
+        delete_vehicle_use_case: DeleteVehicleUseCase,
+        delete_driver_use_case: DeleteDriverUseCase
     ):
         self.register_vehicle_use_case = register_vehicle_use_case
         self.register_driver_use_case = register_driver_use_case
         self.register_group_use_case = register_group_use_case
         self.vehicle_repository = vehicle_repository
         self.driver_repository = driver_repository
+        self.delete_vehicle_use_case = delete_vehicle_use_case
+        self.delete_driver_use_case = delete_driver_use_case
+
+    def _get_group(self, context: ContextTypes.DEFAULT_TYPE):
+        """Retrieve group by chat_id stored in user_data."""
+        from ...infrastructure.persistence.database import database
+        from ...infrastructure.persistence.group_repository_impl import GroupRepository
+
+        session = database.get_session()
+        group_repo = GroupRepository(session)
+        group_id = context.user_data.get('setup_group_id')
+        group = None
+        if group_id:
+            group = group_repo.find_by_chat_id(str(group_id))
+        return group, session
 
     async def setup_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show setup menu with vehicle and driver options"""
         chat = update.effective_chat
 
         # Register group if not already registered
-        try:
-            self.register_group_use_case.execute(
-                chat_id=str(chat.id),
-                name=chat.title or f"Group {chat.id}"
-            )
-        except:
-            pass  # Group already exists
+        if self.register_group_use_case:
+            try:
+                self.register_group_use_case.execute(
+                    chat_id=str(chat.id),
+                    name=chat.title or f"Group {chat.id}"
+                )
+            except:
+                pass  # Group already exists
 
         # Store group info
         context.user_data['setup_group_id'] = chat.id
 
         keyboard = [
             [InlineKeyboardButton("🚗 Setup Vehicle", callback_data="setup_vehicle")],
-            [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")]
+            [InlineKeyboardButton("📋 List Vehicles", callback_data="list_vehicles")],
+            [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")],
+            [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message_text = (
             "⚙️ Setup Menu\n\n"
             "Choose what to setup:\n\n"
-            "Note: Set up vehicles first, then drivers"
+            "Set up vehicles first, then drivers.\n"
+            "You can also list or delete existing entries."
         )
 
         if update.callback_query:
@@ -67,6 +90,156 @@ class SetupHandler:
             await update.message.reply_text(message_text, reply_markup=reply_markup)
 
         return SETUP_MENU
+
+    # ==================== Management ====================
+
+    async def list_vehicles(self, update: Update, context: ContextTypes.DEFAULT_TYPE, skip_answer: bool = False):
+        """List vehicles with delete options"""
+        query = update.callback_query
+        if not skip_answer:
+            await query.answer()
+
+        # Ensure group ID is stored
+        if 'setup_group_id' not in context.user_data:
+            context.user_data['setup_group_id'] = update.effective_chat.id
+
+        group, session = self._get_group(context)
+        if not group:
+            await query.edit_message_text("❌ Error: Group not found. Please try /setup again.")
+            session.close()
+            return ConversationHandler.END
+
+        vehicles = self.vehicle_repository.find_by_group_id(group.id)
+        session.close()
+
+        type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
+        lines = ["🚗 Vehicles", ""]
+        keyboard = []
+
+        if not vehicles:
+            lines.append("No vehicles found.\n\nUse Setup Vehicle to add one.")
+        else:
+            for idx, vehicle in enumerate(vehicles, 1):
+                emoji = type_emoji.get(vehicle.vehicle_type, "🚗")
+                lines.append(f"{idx}. {emoji} {vehicle.license_plate}")
+                keyboard.append([
+                    InlineKeyboardButton(
+                        f"🗑️ Delete {vehicle.license_plate}",
+                        callback_data=f"delete_vehicle_{vehicle.id}"
+                    )
+                ])
+
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Setup", callback_data="back_to_setup")])
+
+        await query.edit_message_text(
+            "\n".join(lines),
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+        return SETUP_MENU
+
+    async def list_drivers(self, update: Update, context: ContextTypes.DEFAULT_TYPE, skip_answer: bool = False):
+        """List drivers with delete options"""
+        query = update.callback_query
+        if not skip_answer:
+            await query.answer()
+
+        if 'setup_group_id' not in context.user_data:
+            context.user_data['setup_group_id'] = update.effective_chat.id
+
+        group, session = self._get_group(context)
+        if not group:
+            await query.edit_message_text("❌ Error: Group not found. Please try /setup again.")
+            session.close()
+            return ConversationHandler.END
+
+        drivers = self.driver_repository.find_by_group_id(group.id)
+        vehicles = self.vehicle_repository.find_by_group_id(group.id)
+        vehicle_map = {v.id: v for v in vehicles}
+        session.close()
+
+        lines = ["👤 Drivers", ""]
+        keyboard = []
+
+        if not drivers:
+            lines.append("No drivers found.\n\nUse Setup Driver to add one.")
+        else:
+            for idx, driver in enumerate(drivers, 1):
+                vehicle_label = ""
+                if driver.assigned_vehicle_id and driver.assigned_vehicle_id in vehicle_map:
+                    vehicle_label = f" - {vehicle_map[driver.assigned_vehicle_id].license_plate}"
+                lines.append(f"{idx}. 👤 {driver.name} ({driver.phone}){vehicle_label}")
+                keyboard.append([
+                    InlineKeyboardButton(
+                        f"🗑️ Delete {driver.name}",
+                        callback_data=f"delete_driver_{driver.id}"
+                    )
+                ])
+
+        keyboard.append([InlineKeyboardButton("⬅️ Back to Setup", callback_data="back_to_setup")])
+
+        await query.edit_message_text(
+            "\n".join(lines),
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+        return SETUP_MENU
+
+    async def delete_vehicle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Delete selected vehicle"""
+        query = update.callback_query
+        vehicle_id = int(query.data.replace("delete_vehicle_", ""))
+
+        if 'setup_group_id' not in context.user_data:
+            context.user_data['setup_group_id'] = update.effective_chat.id
+
+        group, session = self._get_group(context)
+        if not group:
+            await query.answer("Group not found", show_alert=True)
+            session.close()
+            return ConversationHandler.END
+
+        try:
+            response = self.delete_vehicle_use_case.execute(group.id, vehicle_id)
+            await query.answer(f"Deleted {response.license_plate}")
+        except ValueError as e:
+            await query.answer(str(e), show_alert=True)
+            session.close()
+            return SETUP_MENU
+
+        session.close()
+        return await self.list_vehicles(update, context, skip_answer=True)
+
+    async def delete_driver(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Delete selected driver"""
+        query = update.callback_query
+        driver_id = int(query.data.replace("delete_driver_", ""))
+
+        if 'setup_group_id' not in context.user_data:
+            context.user_data['setup_group_id'] = update.effective_chat.id
+
+        group, session = self._get_group(context)
+        if not group:
+            await query.answer("Group not found", show_alert=True)
+            session.close()
+            return ConversationHandler.END
+
+        try:
+            response = self.delete_driver_use_case.execute(group.id, driver_id)
+            await query.answer(f"Deleted {response.name}")
+        except ValueError as e:
+            await query.answer(str(e), show_alert=True)
+            session.close()
+            return SETUP_MENU
+
+        session.close()
+        return await self.list_drivers(update, context, skip_answer=True)
+
+    async def back_to_setup_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Return to setup menu"""
+        if update.callback_query:
+            await update.callback_query.answer()
+        return await self.setup_menu(update, context)
 
     # ==================== Vehicle Registration ====================
 

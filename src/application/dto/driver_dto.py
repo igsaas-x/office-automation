@@ -18,3 +18,10 @@ class DriverResponse:
     role: str
     assigned_vehicle_id: Optional[int]
     created_at: str
+
+
+@dataclass
+class DeleteDriverResponse:
+    id: int
+    name: str
+    phone: str

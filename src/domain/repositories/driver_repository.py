@@ -18,3 +18,8 @@ class IDriverRepository(ABC):
     @abstractmethod
     def find_by_phone(self, group_id: int, phone: str) -> Optional[Driver]:
         pass
+
+    @abstractmethod
+    def delete(self, driver_id: int) -> bool:
+        """Delete driver by ID. Returns True if deleted."""
+        pass

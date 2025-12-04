@@ -52,6 +52,9 @@ from ...infrastructure.persistence.trip_repository_impl import TripRepository
 from ...infrastructure.persistence.fuel_record_repository_impl import FuelRecordRepository
 from ...application.use_cases.register_vehicle import RegisterVehicleUseCase
 from ...application.use_cases.register_driver import RegisterDriverUseCase
+from ...application.use_cases.register_group import RegisterGroupUseCase
+from ...application.use_cases.delete_vehicle import DeleteVehicleUseCase
+from ...application.use_cases.delete_driver import DeleteDriverUseCase
 from ...application.use_cases.record_trip import RecordTripUseCase
 from ...application.use_cases.record_fuel import RecordFuelUseCase
 from ...application.use_cases.get_daily_report import GetDailyReportUseCase
@@ -225,8 +228,6 @@ class BotApplication:
             await menu_handler.show_menu(update, context)
 
         async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            from ...application.use_cases.register_group import RegisterGroupUseCase
-
             chat = update.effective_chat
             message = update.effective_message
 
@@ -338,95 +339,94 @@ class BotApplication:
         # ==================== Vehicle Logistics Handlers ====================
 
         # Setup handlers
-        async def setup_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            from ...application.use_cases.register_group import RegisterGroupUseCase
-
-            session, _, _, _, group_repo, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
+        def build_setup_handler(include_group: bool = False):
+            session, _, _, _, group_repo, _, vehicle_repo, driver_repo, trip_repo, fuel_repo = self._get_repositories()
             setup_handler = SetupHandler(
                 RegisterVehicleUseCase(vehicle_repo),
                 RegisterDriverUseCase(driver_repo, vehicle_repo),
-                register_group_use_case=RegisterGroupUseCase(group_repo),
-                vehicle_repository=vehicle_repo,
-                driver_repository=driver_repo
+                RegisterGroupUseCase(group_repo) if include_group else None,
+                vehicle_repo,
+                driver_repo,
+                DeleteVehicleUseCase(vehicle_repo, driver_repo, trip_repo, fuel_repo),
+                DeleteDriverUseCase(driver_repo, trip_repo)
             )
+            return session, setup_handler
+
+        async def setup_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler(include_group=True)
             result = await setup_handler.setup_menu(update, context)
             session.close()
             return result
 
         async def setup_vehicle_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.start_vehicle_setup(update, context)
             session.close()
             return result
 
         async def setup_vehicle_plate_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.receive_vehicle_plate(update, context)
             session.close()
             return result
 
         async def setup_driver_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.start_driver_setup(update, context)
             session.close()
             return result
 
         async def setup_driver_name_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.receive_driver_name(update, context)
             session.close()
             return result
 
         async def setup_driver_role_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.receive_driver_role(update, context)
             session.close()
             return result
 
         async def setup_driver_phone_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.receive_driver_phone(update, context)
             session.close()
             return result
 
         async def setup_driver_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, driver_repo, _, _ = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                RegisterDriverUseCase(driver_repo, vehicle_repo),
-                None, vehicle_repo, driver_repo
-            )
+            session, setup_handler = build_setup_handler()
             result = await setup_handler.receive_driver_vehicle(update, context)
+            session.close()
+            return result
+
+        async def setup_list_vehicles_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler()
+            result = await setup_handler.list_vehicles(update, context)
+            session.close()
+            return result
+
+        async def setup_list_drivers_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler()
+            result = await setup_handler.list_drivers(update, context)
+            session.close()
+            return result
+
+        async def setup_delete_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler()
+            result = await setup_handler.delete_vehicle(update, context)
+            session.close()
+            return result
+
+        async def setup_delete_driver_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler()
+            result = await setup_handler.delete_driver(update, context)
+            session.close()
+            return result
+
+        async def setup_back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler(include_group=True)
+            result = await setup_handler.back_to_setup_menu(update, context)
             session.close()
             return result
 
@@ -622,6 +622,11 @@ class BotApplication:
                 SETUP_MENU: [
                     CallbackQueryHandler(setup_vehicle_start_wrapper, pattern="^setup_vehicle$"),
                     CallbackQueryHandler(setup_driver_start_wrapper, pattern="^setup_driver$"),
+                    CallbackQueryHandler(setup_list_vehicles_wrapper, pattern="^list_vehicles$"),
+                    CallbackQueryHandler(setup_list_drivers_wrapper, pattern="^list_drivers$"),
+                    CallbackQueryHandler(setup_delete_vehicle_wrapper, pattern="^delete_vehicle_"),
+                    CallbackQueryHandler(setup_delete_driver_wrapper, pattern="^delete_driver_"),
+                    CallbackQueryHandler(setup_back_to_menu_wrapper, pattern="^back_to_setup$"),
                 ],
                 SETUP_VEHICLE_PLATE: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_plate_wrapper)

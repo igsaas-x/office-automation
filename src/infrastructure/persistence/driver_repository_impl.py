@@ -48,6 +48,19 @@ class DriverRepository(IDriverRepository):
         ).first()
         return self._to_entity(db_driver) if db_driver else None
 
+    def delete(self, driver_id: int) -> bool:
+        db_driver = self.session.query(DriverModel).filter_by(id=driver_id).first()
+        if not db_driver:
+            return False
+
+        try:
+            self.session.delete(db_driver)
+            self.session.commit()
+            return True
+        except Exception:
+            self.session.rollback()
+            raise
+
     def _to_entity(self, model: DriverModel) -> Driver:
         return Driver(
             id=model.id,

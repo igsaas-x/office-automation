@@ -44,6 +44,19 @@ class VehicleRepository(IVehicleRepository):
         ).first()
         return self._to_entity(db_vehicle) if db_vehicle else None
 
+    def delete(self, vehicle_id: int) -> bool:
+        db_vehicle = self.session.query(VehicleModel).filter_by(id=vehicle_id).first()
+        if not db_vehicle:
+            return False
+
+        try:
+            self.session.delete(db_vehicle)
+            self.session.commit()
+            return True
+        except Exception:
+            self.session.rollback()
+            raise
+
     def _to_entity(self, model: VehicleModel) -> Vehicle:
         return Vehicle(
             id=model.id,

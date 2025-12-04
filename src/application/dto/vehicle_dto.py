@@ -14,3 +14,9 @@ class VehicleResponse:
     license_plate: str
     vehicle_type: str
     created_at: str
+
+
+@dataclass
+class DeleteVehicleResponse:
+    id: int
+    license_plate: str

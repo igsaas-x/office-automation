@@ -18,3 +18,8 @@ class IVehicleRepository(ABC):
     @abstractmethod
     def find_by_license_plate(self, group_id: int, license_plate: str) -> Optional[Vehicle]:
         pass
+
+    @abstractmethod
+    def delete(self, vehicle_id: int) -> bool:
+        """Delete vehicle by ID. Returns True if deleted."""
+        pass

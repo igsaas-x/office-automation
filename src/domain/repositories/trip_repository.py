@@ -45,3 +45,13 @@ class ITripRepository(ABC):
     ) -> List[Trip]:
         """Find all trips for a group within a date range."""
         pass
+
+    @abstractmethod
+    def has_trips_for_vehicle(self, vehicle_id: int) -> bool:
+        """Check if any trips exist for the vehicle."""
+        pass
+
+    @abstractmethod
+    def has_trips_for_driver(self, driver_id: int) -> bool:
+        """Check if any trips exist for the driver."""
+        pass
