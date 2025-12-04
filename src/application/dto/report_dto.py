@@ -11,10 +11,28 @@ class VehicleDailySummary:
     total_fuel_liters: float
     total_fuel_cost: float
 
+
+@dataclass
+class TripDailyDetail:
+    vehicle_plate: str
+    driver_name: Optional[str]
+    trip_number: int
+    created_at: str
+
+
+@dataclass
+class FuelDailyDetail:
+    vehicle_plate: str
+    liters: float
+    cost: float
+    created_at: str
+
 @dataclass
 class DailyReportResponse:
     date: str
     vehicles: List[VehicleDailySummary]
+    trips: List[TripDailyDetail]
+    fuel_records: List[FuelDailyDetail]
     total_trips: int
     total_fuel_liters: float
     total_fuel_cost: float

@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
-from datetime import date
+from datetime import date, datetime
 from ...application.use_cases.get_daily_report import GetDailyReportUseCase
 from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
 from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
@@ -82,6 +82,27 @@ class ReportHandler:
                         message_text += f"  • Driver: {vehicle_data.driver_name}\n"
             else:
                 message_text += "\n⚠️ No activity recorded for today."
+
+            # Trip list
+            message_text += "\n\n🛣️ Trips Today:\n"
+            if report.trips:
+                for trip in report.trips:
+                    time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
+                    driver_part = f" - {trip.driver_name}" if trip.driver_name else ""
+                    message_text += f"• {trip.vehicle_plate}{driver_part}: Trip #{trip.trip_number} at {time_str}\n"
+            else:
+                message_text += "• None recorded\n"
+
+            # Fuel list
+            message_text += "\n⛽ Fuel Records:\n"
+            if report.fuel_records:
+                for fuel in report.fuel_records:
+                    time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
+                    message_text += (
+                        f"• {fuel.vehicle_plate}: {fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}\n"
+                    )
+            else:
+                message_text += "• None recorded\n"
 
             # Display report without buttons (end of session)
             if query:
