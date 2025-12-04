@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timezone
@@ -96,3 +96,80 @@ class AllowanceModel(Base):
     timestamp = Column(DateTime, default=utc_now)
 
     employee = relationship('EmployeeModel', back_populates='allowances')
+
+
+# Vehicle Logistics Models
+
+class VehicleModel(Base):
+    __tablename__ = 'vehicles'
+
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    license_plate = Column(String(20), nullable=False)
+    vehicle_type = Column(String(20), nullable=False)  # TRUCK, VAN, MOTORCYCLE, CAR
+    created_at = Column(DateTime, default=utc_now)
+
+    group = relationship('GroupModel')
+    drivers = relationship('DriverModel', back_populates='assigned_vehicle')
+    trips = relationship('TripModel', back_populates='vehicle')
+    fuel_records = relationship('FuelRecordModel', back_populates='vehicle')
+
+    __table_args__ = (
+        UniqueConstraint('group_id', 'license_plate', name='uq_group_license_plate'),
+    )
+
+
+class DriverModel(Base):
+    __tablename__ = 'drivers'
+
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=False)
+    role = Column(String(20), nullable=False, default='DRIVER')
+    assigned_vehicle_id = Column(Integer, ForeignKey('vehicles.id'), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    group = relationship('GroupModel')
+    assigned_vehicle = relationship('VehicleModel', back_populates='drivers')
+    trips = relationship('TripModel', back_populates='driver')
+
+    __table_args__ = (
+        UniqueConstraint('group_id', 'phone', name='uq_group_phone'),
+    )
+
+
+class TripModel(Base):
+    __tablename__ = 'trips'
+
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), nullable=False)
+    driver_id = Column(Integer, ForeignKey('drivers.id'), nullable=False)
+    date = Column(Date, nullable=False)
+    trip_number = Column(Integer, nullable=False)  # Auto-increments daily per vehicle
+    created_at = Column(DateTime, default=utc_now)
+
+    group = relationship('GroupModel')
+    vehicle = relationship('VehicleModel', back_populates='trips')
+    driver = relationship('DriverModel', back_populates='trips')
+
+    __table_args__ = (
+        UniqueConstraint('vehicle_id', 'date', 'trip_number', name='uq_vehicle_date_trip_number'),
+    )
+
+
+class FuelRecordModel(Base):
+    __tablename__ = 'fuel_records'
+
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), nullable=False)
+    date = Column(Date, nullable=False)
+    liters = Column(Float, nullable=False)
+    cost = Column(Float, nullable=False)
+    receipt_photo_url = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    group = relationship('GroupModel')
+    vehicle = relationship('VehicleModel', back_populates='fuel_records')
