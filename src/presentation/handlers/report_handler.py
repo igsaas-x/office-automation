@@ -66,43 +66,45 @@ class ReportHandler:
                 f"• Total Cost: {report.total_fuel_cost:,.0f} រៀល\n\n"
             )
 
-            if report.vehicles:
-                message_text += "🚗 Vehicle Breakdown:\n"
+            if not report.vehicles:
+                message_text += "⚠️ No activity recorded for today."
+            else:
                 type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
 
-                for vehicle_data in report.vehicles:
+                for idx, vehicle_data in enumerate(report.vehicles):
                     emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
                     message_text += (
-                        f"\n{emoji} {vehicle_data.license_plate}\n"
+                        f"{emoji} {vehicle_data.license_plate}\n"
                         f"  • Trips: {vehicle_data.trip_count}\n"
                     )
                     if vehicle_data.total_fuel_liters > 0:
                         message_text += f"  • Fuel: {vehicle_data.total_fuel_liters}L ({vehicle_data.total_fuel_cost:,.0f} រៀល)\n"
                     if vehicle_data.driver_name:
                         message_text += f"  • Driver: {vehicle_data.driver_name}\n"
-            else:
-                message_text += "\n⚠️ No activity recorded for today."
 
-            # Trip list
-            message_text += "\n\n🛣️ Trips Today:\n"
-            if report.trips:
-                for trip in report.trips:
-                    time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
-                    driver_part = f" - {trip.driver_name}" if trip.driver_name else ""
-                    message_text += f"• {trip.vehicle_plate}{driver_part}: Trip #{trip.trip_number} at {time_str}\n"
-            else:
-                message_text += "• None recorded\n"
+                    # Trips for this vehicle
+                    message_text += "\n🛣️ Trips Today:\n"
+                    vehicle_trips = [t for t in report.trips if t.vehicle_plate == vehicle_data.license_plate]
+                    if vehicle_trips:
+                        for trip in vehicle_trips:
+                            time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
+                            driver_part = f" - {trip.driver_name}" if trip.driver_name else ""
+                            message_text += f"• {trip.vehicle_plate}{driver_part}: Trip #{trip.trip_number} at {time_str}\n"
+                    else:
+                        message_text += "• None recorded\n"
 
-            # Fuel list
-            message_text += "\n⛽ Fuel Records:\n"
-            if report.fuel_records:
-                for fuel in report.fuel_records:
-                    time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
-                    message_text += (
-                        f"• {fuel.vehicle_plate}: {fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}\n"
-                    )
-            else:
-                message_text += "• None recorded\n"
+                    # Fuel for this vehicle
+                    message_text += "\n⛽ Fuel Records:\n"
+                    vehicle_fuels = [f for f in report.fuel_records if f.vehicle_plate == vehicle_data.license_plate]
+                    if vehicle_fuels:
+                        for fuel in vehicle_fuels:
+                            time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
+                            message_text += f"• {fuel.vehicle_plate}: {fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}\n"
+                    else:
+                        message_text += "• None recorded\n"
+
+                    if idx < len(report.vehicles) - 1:
+                        message_text += "\n\n"
 
             # Display report without buttons (end of session)
             if query:
