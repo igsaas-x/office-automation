@@ -84,18 +84,11 @@ class ReportHandler:
             else:
                 message_text += "\n⚠️ No activity recorded for today."
 
-            # Add action buttons
-            keyboard = [
-                [InlineKeyboardButton("📊 Export Excel", callback_data="export_daily_excel")],
-                [InlineKeyboardButton("📄 Export PDF", callback_data="export_daily_pdf")],
-                [InlineKeyboardButton("🏠 Back to Menu", callback_data="back_to_menu")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
+            # Display report without buttons (end of session)
             if query:
-                await query.edit_message_text(message_text, reply_markup=reply_markup)
+                await query.edit_message_text(message_text)
             else:
-                await update.message.reply_text(message_text, reply_markup=reply_markup)
+                await update.message.reply_text(message_text)
 
         except Exception as e:
             error_message = f"❌ Error generating report: {str(e)}"
@@ -185,18 +178,11 @@ class ReportHandler:
             else:
                 message_text += "\n\n⚠️ No activity recorded for this month."
 
-            # Add action buttons
-            keyboard = [
-                [InlineKeyboardButton("📊 Export Excel", callback_data="export_monthly_excel")],
-                [InlineKeyboardButton("📄 Export PDF", callback_data="export_monthly_pdf")],
-                [InlineKeyboardButton("🏠 Back to Menu", callback_data="back_to_menu")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
+            # Display report without buttons (end of session)
             if query:
-                await query.edit_message_text(message_text, reply_markup=reply_markup)
+                await query.edit_message_text(message_text)
             else:
-                await update.message.reply_text(message_text, reply_markup=reply_markup)
+                await update.message.reply_text(message_text)
 
         except Exception as e:
             error_message = f"❌ Error generating report: {str(e)}"
@@ -343,16 +329,8 @@ class ReportHandler:
                     if day_data.fuel_liters > 0:
                         message_text += f"  • Fuel: {day_data.fuel_liters}L ({day_data.fuel_cost:,.0f} រៀល)\n"
 
-            # Add action buttons
-            keyboard = [
-                [InlineKeyboardButton("📊 Export Excel", callback_data=f"export_perf_excel_{vehicle_id}")],
-                [InlineKeyboardButton("📄 Export PDF", callback_data=f"export_perf_pdf_{vehicle_id}")],
-                [InlineKeyboardButton("🔙 Select Another Vehicle", callback_data="report_vehicle_performance")],
-                [InlineKeyboardButton("🏠 Back to Menu", callback_data="back_to_menu")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-
-            await query.edit_message_text(message_text, reply_markup=reply_markup)
+            # Display report without buttons (end of session)
+            await query.edit_message_text(message_text)
 
         except Exception as e:
             await query.edit_message_text(f"❌ Error: {str(e)}")
