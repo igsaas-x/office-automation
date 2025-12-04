@@ -59,8 +59,7 @@ class ReportHandler:
 
             # Format report message
             message_text = (
-                f"📅 Daily Report - {report.date}\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"📅 Daily Report - {report.date}\n\n"
                 f"📊 Summary:\n"
                 f"• Total Trips: {report.total_trips}\n"
                 f"• Total Fuel: {report.total_fuel_liters}L\n"
