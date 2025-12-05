@@ -24,12 +24,12 @@ class SetupHandler:
     def __init__(
         self,
         register_vehicle_use_case: RegisterVehicleUseCase,
-        register_driver_use_case: RegisterDriverUseCase,
-        register_group_use_case: RegisterGroupUseCase,
-        vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository,
-        delete_vehicle_use_case: DeleteVehicleUseCase,
-        delete_driver_use_case: DeleteDriverUseCase
+        register_driver_use_case: Optional[RegisterDriverUseCase] = None,
+        register_group_use_case: Optional[RegisterGroupUseCase] = None,
+        vehicle_repository: Optional[IVehicleRepository] = None,
+        driver_repository: Optional[IDriverRepository] = None,
+        delete_vehicle_use_case: Optional[DeleteVehicleUseCase] = None,
+        delete_driver_use_case: Optional[DeleteDriverUseCase] = None
     ):
         self.register_vehicle_use_case = register_vehicle_use_case
         self.register_driver_use_case = register_driver_use_case

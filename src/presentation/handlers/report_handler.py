@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
+from typing import Optional
 from datetime import date
 from html import escape
 from ...application.use_cases.get_daily_report import GetDailyReportUseCase
@@ -19,7 +20,7 @@ class ReportHandler:
         monthly_report_use_case: GetMonthlyReportUseCase,
         vehicle_performance_use_case: GetVehiclePerformanceUseCase,
         vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository
+        driver_repository: Optional[IDriverRepository] = None
     ):
         self.daily_report_use_case = daily_report_use_case
         self.monthly_report_use_case = monthly_report_use_case
