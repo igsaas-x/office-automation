@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
+from typing import Optional
 from ...application.use_cases.register_vehicle import RegisterVehicleUseCase
 from ...application.use_cases.register_driver import RegisterDriverUseCase
 from ...application.use_cases.register_group import RegisterGroupUseCase
@@ -72,18 +73,30 @@ class SetupHandler:
         keyboard = [
             [InlineKeyboardButton("🚗 Setup Vehicle", callback_data="setup_vehicle")],
             [InlineKeyboardButton("📋 List Vehicles", callback_data="list_vehicles")],
-            [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")],
-            [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_setup")]
         ]
+
+        # Only show driver options if driver functionality is enabled
+        if self.register_driver_use_case:
+            keyboard.extend([
+                [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")],
+                [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")],
+            ])
+
+        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_setup")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = (
-            "⚙️ Setup Menu\n\n"
-            "Choose what to setup:\n\n"
-            "Set up vehicles first, then drivers.\n"
-            "You can also list or delete existing entries."
-        )
+        message_text = "⚙️ Setup Menu\n\n"
+        if self.register_driver_use_case:
+            message_text += (
+                "Choose what to setup:\n\n"
+                "Set up vehicles first, then drivers.\n"
+                "You can also list or delete existing entries."
+            )
+        else:
+            message_text += (
+                "Choose what to setup:\n\n"
+                "You can setup vehicles and manage your fleet."
+            )
 
         if update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -141,6 +154,12 @@ class SetupHandler:
 
     async def list_drivers(self, update: Update, context: ContextTypes.DEFAULT_TYPE, skip_answer: bool = False):
         """List drivers with delete options"""
+        # Driver functionality disabled
+        if not self.driver_repository:
+            query = update.callback_query
+            await query.answer("Driver functionality is not available")
+            return SETUP_MENU
+
         query = update.callback_query
         if not skip_answer:
             await query.answer()
@@ -213,6 +232,12 @@ class SetupHandler:
 
     async def delete_driver(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Delete selected driver"""
+        # Driver functionality disabled
+        if not self.delete_driver_use_case:
+            query = update.callback_query
+            await query.answer("Driver functionality is not available")
+            return SETUP_MENU
+
         query = update.callback_query
         driver_id = int(query.data.replace("delete_driver_", ""))
 
@@ -301,6 +326,12 @@ class SetupHandler:
 
     async def start_driver_setup(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start driver registration flow"""
+        # Driver functionality disabled
+        if not self.register_driver_use_case:
+            query = update.callback_query
+            await query.answer("Driver functionality is not available")
+            return SETUP_MENU
+
         query = update.callback_query
         await query.answer()
 
@@ -313,6 +344,11 @@ class SetupHandler:
 
     async def receive_driver_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Receive driver name"""
+        # Driver functionality disabled
+        if not self.register_driver_use_case:
+            await update.message.reply_text("Driver functionality is not available")
+            return ConversationHandler.END
+
         driver_name = update.message.text.strip()
         context.user_data['driver_name'] = driver_name
 
@@ -326,6 +362,11 @@ class SetupHandler:
 
     async def receive_driver_role(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Receive driver role"""
+        # Driver functionality disabled
+        if not self.register_driver_use_case:
+            await update.message.reply_text("Driver functionality is not available")
+            return ConversationHandler.END
+
         driver_role = update.message.text.strip()
         context.user_data['driver_role'] = driver_role
 
@@ -340,6 +381,11 @@ class SetupHandler:
 
     async def receive_driver_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Receive driver phone and show vehicle selection"""
+        # Driver functionality disabled
+        if not self.register_driver_use_case:
+            await update.message.reply_text("Driver functionality is not available")
+            return ConversationHandler.END
+
         driver_phone = update.message.text.strip()
         context.user_data['driver_phone'] = driver_phone
 
@@ -393,6 +439,12 @@ class SetupHandler:
 
     async def receive_driver_vehicle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Receive vehicle assignment and save driver"""
+        # Driver functionality disabled
+        if not self.register_driver_use_case:
+            query = update.callback_query
+            await query.answer("Driver functionality is not available")
+            return ConversationHandler.END
+
         query = update.callback_query
         await query.answer()
 
