@@ -28,6 +28,7 @@ from ...presentation.handlers.setup_handler import (
     SetupHandler,
     SETUP_MENU,
     SETUP_VEHICLE_PLATE,
+    SETUP_VEHICLE_DRIVER,
     SETUP_DRIVER_NAME,
     SETUP_DRIVER_ROLE,
     SETUP_DRIVER_PHONE,
@@ -368,6 +369,12 @@ class BotApplication:
             session.close()
             return result
 
+        async def setup_vehicle_driver_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, setup_handler = build_setup_handler()
+            result = await setup_handler.receive_vehicle_driver_name(update, context)
+            session.close()
+            return result
+
         async def setup_driver_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, setup_handler = build_setup_handler()
             result = await setup_handler.start_driver_setup(update, context)
@@ -665,6 +672,10 @@ class BotApplication:
                 ],
                 SETUP_VEHICLE_PLATE: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_plate_wrapper)
+                ],
+                SETUP_VEHICLE_DRIVER: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_driver_wrapper),
+                    CallbackQueryHandler(setup_vehicle_driver_wrapper, pattern="^vehicle_skip_driver$")
                 ],
                 SETUP_DRIVER_NAME: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_driver_name_wrapper)

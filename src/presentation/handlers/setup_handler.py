@@ -15,6 +15,7 @@ from ...domain.repositories.driver_repository import IDriverRepository
 SETUP_MENU = 0
 # Vehicle registration states
 SETUP_VEHICLE_PLATE = 10
+SETUP_VEHICLE_DRIVER = 11
 # Driver registration states
 SETUP_DRIVER_NAME = 20
 SETUP_DRIVER_ROLE = 21
@@ -283,8 +284,38 @@ class SetupHandler:
         return SETUP_VEHICLE_PLATE
 
     async def receive_vehicle_plate(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Receive vehicle license plate and save vehicle"""
+        """Receive vehicle license plate and ask for driver name"""
         license_plate = update.message.text.strip()
+
+        # Store license plate in context
+        context.user_data['vehicle_license_plate'] = license_plate
+
+        # Ask for driver name with skip option
+        keyboard = [[InlineKeyboardButton("⏭️ Skip (No Driver)", callback_data="vehicle_skip_driver")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            f"License Plate: {license_plate}\n\n"
+            "Please enter the driver's name for this vehicle:\n\n"
+            "Or press Skip if this vehicle doesn't have an assigned driver.",
+            reply_markup=reply_markup
+        )
+
+        return SETUP_VEHICLE_DRIVER
+
+    async def receive_vehicle_driver_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Receive vehicle driver name and save vehicle"""
+        # Get driver name from message or callback
+        driver_name = None
+        if update.callback_query:
+            await update.callback_query.answer()
+            # User clicked skip button
+            driver_name = None
+        else:
+            # User provided driver name
+            driver_name = update.message.text.strip()
+
+        license_plate = context.user_data.get('vehicle_license_plate')
 
         # Get group from database to get its ID
         from ...infrastructure.persistence.database import database
@@ -295,28 +326,43 @@ class SetupHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['setup_group_id']))
 
         if not group:
-            await update.message.reply_text("❌ Error: Group not found. Please try again.")
+            error_msg = "❌ Error: Group not found. Please try again."
+            if update.callback_query:
+                await update.callback_query.edit_message_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
             session.close()
             return ConversationHandler.END
 
         try:
-            # Register vehicle with default type "TRUCK"
+            # Register vehicle with optional driver name
             request = RegisterVehicleRequest(
                 group_id=group.id,
                 license_plate=license_plate,
-                vehicle_type="TRUCK"  # Default type
+                vehicle_type="TRUCK",  # Default type
+                driver_name=driver_name
             )
             response = self.register_vehicle_use_case.execute(request)
 
             # Show success message
-            await update.message.reply_text(
+            success_msg = (
                 f"✅ Vehicle registered successfully!\n\n"
-                f"License Plate: {response.license_plate}\n\n"
-                "You can now setup drivers and assign them to this vehicle."
+                f"License Plate: {response.license_plate}\n"
             )
+            if driver_name:
+                success_msg += f"Driver: {driver_name}\n"
+
+            if update.callback_query:
+                await update.callback_query.edit_message_text(success_msg)
+            else:
+                await update.message.reply_text(success_msg)
 
         except ValueError as e:
-            await update.message.reply_text(f"❌ Error: {str(e)}")
+            error_msg = f"❌ Error: {str(e)}"
+            if update.callback_query:
+                await update.callback_query.edit_message_text(error_msg)
+            else:
+                await update.message.reply_text(error_msg)
         finally:
             session.close()
 
