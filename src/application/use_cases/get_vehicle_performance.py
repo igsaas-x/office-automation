@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Dict
+from typing import Dict, Optional
 from collections import defaultdict
 import calendar
 from ...domain.repositories.vehicle_repository import IVehicleRepository
@@ -12,7 +12,7 @@ class GetVehiclePerformanceUseCase:
     def __init__(
         self,
         vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository,
+        driver_repository: Optional[IDriverRepository],
         trip_repository: ITripRepository,
         fuel_record_repository: IFuelRecordRepository
     ):
@@ -26,14 +26,6 @@ class GetVehiclePerformanceUseCase:
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
             raise ValueError(f"Vehicle with ID {vehicle_id} not found")
-
-        # Get driver name if assigned
-        driver_name = None
-        drivers = self.driver_repository.find_by_group_id(vehicle.group_id)
-        for driver in drivers:
-            if driver.assigned_vehicle_id == vehicle.id:
-                driver_name = driver.name
-                break
 
         # Get current month data
         today = date.today()
@@ -102,7 +94,7 @@ class GetVehiclePerformanceUseCase:
             vehicle_id=vehicle.id,
             license_plate=vehicle.license_plate,
             vehicle_type=vehicle.vehicle_type,
-            driver_name=driver_name,
+            driver_name=None,  # Driver functionality disabled
             month_total_trips=month_total_trips,
             month_total_loading_size=round(month_total_loading_size, 1),
             month_total_fuel=round(month_total_fuel, 1),

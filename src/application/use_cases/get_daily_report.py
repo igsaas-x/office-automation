@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Dict
+from typing import Dict, Optional
 from collections import defaultdict
 from ...domain.repositories.vehicle_repository import IVehicleRepository
 from ...domain.repositories.driver_repository import IDriverRepository
@@ -16,7 +16,7 @@ class GetDailyReportUseCase:
     def __init__(
         self,
         vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository,
+        driver_repository: Optional[IDriverRepository],
         trip_repository: ITripRepository,
         fuel_record_repository: IFuelRecordRepository
     ):
@@ -29,18 +29,9 @@ class GetDailyReportUseCase:
         if report_date is None:
             report_date = date.today()
 
-        # Get all vehicles/drivers for the group
+        # Get all vehicles for the group
         vehicles = self.vehicle_repository.find_by_group_id(group_id)
         vehicle_map = {v.id: v for v in vehicles}
-
-        drivers = self.driver_repository.find_by_group_id(group_id)
-        driver_map = {d.id: d for d in drivers}
-
-        driver_by_vehicle = {
-            d.assigned_vehicle_id: d
-            for d in drivers
-            if d.assigned_vehicle_id is not None
-        }
 
         # Get all trips and fuel records for the date
         trips = self.trip_repository.find_by_group_and_date(group_id, report_date)
@@ -74,15 +65,11 @@ class GetDailyReportUseCase:
         for vehicle in vehicles:
             data = vehicle_data[vehicle.id]
 
-            # Get driver name if assigned
-            driver = driver_by_vehicle.get(vehicle.id)
-            driver_name = driver.name if driver else None
-
             vehicle_summaries.append(VehicleDailySummary(
                 vehicle_id=vehicle.id,
                 license_plate=vehicle.license_plate,
                 vehicle_type=vehicle.vehicle_type,
-                driver_name=driver_name,
+                driver_name=None,  # Driver functionality disabled
                 trip_count=data['trip_count'],
                 total_loading_size=data['total_loading_size'],
                 total_fuel_liters=data['total_fuel_liters'],
@@ -97,10 +84,9 @@ class GetDailyReportUseCase:
         trip_details = []
         for trip in sorted(trips, key=lambda t: t.created_at):
             vehicle = vehicle_map.get(trip.vehicle_id)
-            driver = driver_map.get(trip.driver_id)
             trip_details.append(TripDailyDetail(
                 vehicle_plate=vehicle.license_plate if vehicle else "Unknown",
-                driver_name=driver.name if driver else None,
+                driver_name=None,  # Driver functionality disabled
                 trip_number=trip.trip_number,
                 created_at=trip.created_at.isoformat()
             ))

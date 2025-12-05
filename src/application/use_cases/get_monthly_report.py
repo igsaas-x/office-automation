@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Dict
+from typing import Dict, Optional
 from collections import defaultdict
 import calendar
 from ...domain.repositories.vehicle_repository import IVehicleRepository
@@ -12,7 +12,7 @@ class GetMonthlyReportUseCase:
     def __init__(
         self,
         vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository,
+        driver_repository: Optional[IDriverRepository],
         trip_repository: ITripRepository,
         fuel_record_repository: IFuelRecordRepository
     ):
@@ -70,14 +70,6 @@ class GetMonthlyReportUseCase:
         for vehicle in vehicles:
             data = vehicle_data[vehicle.id]
 
-            # Get driver name if assigned
-            driver_name = None
-            drivers = self.driver_repository.find_by_group_id(group_id)
-            for driver in drivers:
-                if driver.assigned_vehicle_id == vehicle.id:
-                    driver_name = driver.name
-                    break
-
             # Calculate averages
             avg_trips_per_day = data['trip_count'] / days_in_month if days_in_month > 0 else 0
             avg_fuel_per_trip = (
@@ -89,7 +81,7 @@ class GetMonthlyReportUseCase:
                 vehicle_id=vehicle.id,
                 license_plate=vehicle.license_plate,
                 vehicle_type=vehicle.vehicle_type,
-                driver_name=driver_name,
+                driver_name=None,  # Driver functionality disabled
                 total_trips=data['trip_count'],
                 total_loading_size=data['total_loading_size'],
                 total_fuel_liters=data['total_fuel_liters'],
