@@ -8,6 +8,7 @@ from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
 from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
 from ...domain.repositories.vehicle_repository import IVehicleRepository
 from ...domain.repositories.driver_repository import IDriverRepository
+from ...infrastructure.utils.datetime_utils import format_time_ict
 
 # Conversation states
 SELECT_VEHICLE_FOR_PERFORMANCE = 51
@@ -89,7 +90,7 @@ class ReportHandler:
                     vehicle_trips = [t for t in report.trips if t.vehicle_plate == vehicle_data.license_plate]
                     trip_lines = []
                     for trip in vehicle_trips:
-                        time_str = datetime.fromisoformat(trip.created_at).strftime('%H:%M') if trip.created_at else ""
+                        time_str = format_time_ict(datetime.fromisoformat(trip.created_at)) if trip.created_at else ""
                         trip_lines.append(f"Trip #{trip.trip_number} at {time_str}")
 
                     message_parts.append("\n🛣️ Trips Today:")
@@ -101,7 +102,7 @@ class ReportHandler:
                     vehicle_fuels = [f for f in report.fuel_records if f.vehicle_plate == vehicle_data.license_plate]
                     fuel_lines = []
                     for fuel in vehicle_fuels:
-                        time_str = datetime.fromisoformat(fuel.created_at).strftime('%H:%M') if fuel.created_at else ""
+                        time_str = format_time_ict(datetime.fromisoformat(fuel.created_at)) if fuel.created_at else ""
                         fuel_lines.append(
                             f"{fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}"
                         )

@@ -7,6 +7,7 @@ from ...application.dto.trip_dto import RecordTripRequest
 from ...application.dto.fuel_dto import RecordFuelRequest
 from ...domain.repositories.vehicle_repository import IVehicleRepository
 from ...domain.repositories.driver_repository import IDriverRepository
+from ...infrastructure.utils.datetime_utils import format_time_ict
 
 # Conversation states
 SELECT_VEHICLE_FOR_TRIP = 30
@@ -169,7 +170,7 @@ class VehicleOperationsHandler:
                 f"Vehicle: {emoji} {response.vehicle_license_plate}\n"
                 f"Driver: {response.driver_name}\n"
                 f"Date: {response.date}\n"
-                f"Time: {datetime.fromisoformat(response.created_at).strftime('%H:%M')}\n\n"
+                f"Time: {format_time_ict(datetime.fromisoformat(response.created_at))}\n\n"
                 f"Total trips today: {total_today}"
             )
 
