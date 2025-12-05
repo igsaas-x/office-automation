@@ -76,22 +76,18 @@ class ReportHandler:
             else:
                 # Create consolidated table
                 table_lines = []
-                table_lines.append("Vehicle/Driver|Trips|Fuel(L/$)")
+                table_lines.append("Vehicle   |   Trips   | Fuel(L/$)")
                 table_lines.append("-------------------------------")
 
                 for vehicle_data in report.vehicles:
-                    # Format vehicle/driver column
-                    vehicle_str = f"{vehicle_data.license_plate}"
-                    if vehicle_data.driver_name:
-                        # Show last 5 chars of driver name if longer than 5
-                        driver_name = vehicle_data.driver_name[-5:] if len(vehicle_data.driver_name) > 5 else vehicle_data.driver_name
-                        vehicle_str += f"/{driver_name}"
+                    # Format vehicle column (plate number only)
+                    vehicle_str = vehicle_data.license_plate
 
                     # Format trips column as "count/loadingm³"
                     if vehicle_data.total_loading_size > 0:
                         trips_str = f"{vehicle_data.trip_count}/{vehicle_data.total_loading_size:.0f}m³"
                     else:
-                        trips_str = f"{vehicle_data.trip_count}"
+                        trips_str = str(vehicle_data.trip_count)
 
                     # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
@@ -99,8 +95,8 @@ class ReportHandler:
                     else:
                         fuel_str = "—"
 
-                    # Build the row with pipe separators
-                    table_lines.append(f"{vehicle_str:<14}|{trips_str:^11}| {fuel_str}")
+                    # Build the row with pipe separators and centered alignment
+                    table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
 
                 message_parts.append("<pre>")
                 message_parts.append(escape('\n'.join(table_lines)))
@@ -176,42 +172,44 @@ class ReportHandler:
                 message_text += f"• Avg Trips/Day: {avg_trips_per_day:.1f}\n"
 
             if report.vehicles:
-                message_text += "\n\n🚗 Vehicle Performance:\n"
-                type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
+                message_text += "\n"
+
+                # Create table
+                table_lines = []
+                table_lines.append("Vehicle   |   Trips   | Fuel(L/$)")
+                table_lines.append("-------------------------------")
 
                 # Sort by total trips descending
                 sorted_vehicles = sorted(report.vehicles, key=lambda v: v.total_trips, reverse=True)
 
                 for vehicle_data in sorted_vehicles:
-                    emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
-                    # Format trips as "count/loadingm³"
-                    if vehicle_data.total_loading_size > 0:
-                        trips_display = f"{vehicle_data.total_trips}/{vehicle_data.total_loading_size:.0f}m³"
-                    else:
-                        trips_display = f"{vehicle_data.total_trips}"
+                    # Format vehicle column (plate number only)
+                    vehicle_str = vehicle_data.license_plate
 
-                    message_text += (
-                        f"\n{emoji} {vehicle_data.license_plate}\n"
-                        f"  • Trips: {trips_display}\n"
-                    )
+                    # Format trips column as "count/loadingm³"
+                    if vehicle_data.total_loading_size > 0:
+                        trips_str = f"{vehicle_data.total_trips}/{vehicle_data.total_loading_size:.0f}m³"
+                    else:
+                        trips_str = str(vehicle_data.total_trips)
+
+                    # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
-                        message_text += (
-                            f"  • Fuel: {vehicle_data.total_fuel_liters}L\n"
-                            f"  • Cost: ${vehicle_data.total_fuel_cost:,.2f}\n"
-                        )
-                        if vehicle_data.total_trips > 0:
-                            avg_fuel_per_trip = vehicle_data.total_fuel_liters / vehicle_data.total_trips
-                            message_text += f"  • Avg Fuel/Trip: {avg_fuel_per_trip:.1f}L\n"
-                    if vehicle_data.driver_name:
-                        message_text += f"  • Driver: {vehicle_data.driver_name}\n"
+                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L/{vehicle_data.total_fuel_cost:.0f}$"
+                    else:
+                        fuel_str = "—"
+
+                    # Build the row with pipe separators and centered alignment
+                    table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
+
+                message_text += "<pre>" + escape('\n'.join(table_lines)) + "</pre>"
             else:
                 message_text += "\n\n⚠️ No activity recorded for this month."
 
             # Display report without buttons (end of session)
             if query:
-                await query.edit_message_text(message_text)
+                await query.edit_message_text(message_text, parse_mode=ParseMode.HTML)
             else:
-                await update.message.reply_text(message_text)
+                await update.message.reply_text(message_text, parse_mode=ParseMode.HTML)
 
         except Exception as e:
             error_message = f"❌ Error generating report: {str(e)}"
