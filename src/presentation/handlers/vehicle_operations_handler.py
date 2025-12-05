@@ -76,17 +76,11 @@ class VehicleOperationsHandler:
         type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
         for vehicle in vehicles:
             emoji = type_emoji.get(vehicle.vehicle_type, "🚗")
-            # Get driver name
-            drivers = self.driver_repository.find_by_group_id(group.id)
-            driver_name = None
-            for driver in drivers:
-                if driver.assigned_vehicle_id == vehicle.id:
-                    driver_name = driver.name
-                    break
 
+            # Show vehicle with driver name if available
             label = f"{emoji} {vehicle.license_plate}"
-            if driver_name:
-                label += f" ({driver_name})"
+            if vehicle.driver_name:
+                label += f" ({vehicle.driver_name})"
 
             keyboard.append([
                 InlineKeyboardButton(label, callback_data=f"trip_vehicle_{vehicle.id}")
