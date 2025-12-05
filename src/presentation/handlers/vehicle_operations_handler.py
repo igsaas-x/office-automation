@@ -11,6 +11,8 @@ from ...infrastructure.utils.datetime_utils import format_time_ict
 
 # Conversation states
 SELECT_VEHICLE_FOR_TRIP = 30
+ENTER_TRIP_COUNT = 31
+ENTER_TOTAL_LOADING_SIZE = 32
 SELECT_VEHICLE_FOR_FUEL = 40
 ENTER_FUEL_LITERS = 41
 ENTER_FUEL_COST = 42
@@ -105,12 +107,78 @@ class VehicleOperationsHandler:
 
         return SELECT_VEHICLE_FOR_TRIP
 
-    async def record_trip(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Record trip for selected vehicle"""
+    async def select_trip_vehicle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Vehicle selected, ask for trip count"""
         query = update.callback_query
         await query.answer()
 
         vehicle_id = int(query.data.replace("trip_vehicle_", ""))
+        context.user_data['trip_vehicle_id'] = vehicle_id
+
+        # Get vehicle info
+        vehicle = self.vehicle_repository.find_by_id(vehicle_id)
+        if not vehicle:
+            await query.edit_message_text("❌ Error: Vehicle not found.")
+            return ConversationHandler.END
+
+        context.user_data['trip_vehicle_plate'] = vehicle.license_plate
+
+        await query.edit_message_text(
+            f"🚚 Trip Record for {vehicle.license_plate}\n\n"
+            "Please enter the total number of trips for today:\n"
+            "Example: 5"
+        )
+
+        return ENTER_TRIP_COUNT
+
+    async def receive_trip_count(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Receive trip count and ask for total loading size"""
+        try:
+            trip_count = int(update.message.text.strip())
+            if trip_count <= 0:
+                raise ValueError("Trip count must be greater than 0")
+
+            context.user_data['trip_count'] = trip_count
+            vehicle_plate = context.user_data.get('trip_vehicle_plate')
+
+            await update.message.reply_text(
+                f"Trip count: {trip_count} trips\n\n"
+                "Please enter the total loading size for all trips in cubic meters (m³):\n"
+                "Example: 25 or 25.5"
+            )
+
+            return ENTER_TOTAL_LOADING_SIZE
+
+        except ValueError as e:
+            await update.message.reply_text(
+                f"❌ Invalid input: {str(e)}\n\n"
+                "Please enter a valid number for trip count:"
+            )
+            return ENTER_TRIP_COUNT
+
+    async def receive_total_loading_size(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Receive total loading size and create multiple trips"""
+        try:
+            total_loading_size = float(update.message.text.strip())
+            if total_loading_size <= 0:
+                raise ValueError("Total loading size must be greater than 0")
+
+            context.user_data['total_loading_size'] = total_loading_size
+
+        except ValueError as e:
+            await update.message.reply_text(
+                f"❌ Invalid input: {str(e)}\n\n"
+                "Please enter a valid number for total loading size (in cubic meters):"
+            )
+            return ENTER_TOTAL_LOADING_SIZE
+
+        # Get stored data
+        vehicle_id = context.user_data.get('trip_vehicle_id')
+        vehicle_plate = context.user_data.get('trip_vehicle_plate')
+        trip_count = context.user_data.get('trip_count')
+
+        # Calculate loading size per trip (distributed equally)
+        loading_size_per_trip = total_loading_size / trip_count
 
         # Get group from database
         from ...infrastructure.persistence.database import database
@@ -121,14 +189,14 @@ class VehicleOperationsHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['operation_group_id']))
 
         if not group:
-            await query.edit_message_text("❌ Error: Group not found.")
+            await update.message.reply_text("❌ Error: Group not found.")
             session.close()
             return ConversationHandler.END
 
         # Get vehicle and driver
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
-            await query.edit_message_text("❌ Error: Vehicle not found.")
+            await update.message.reply_text("❌ Error: Vehicle not found.")
             session.close()
             return ConversationHandler.END
 
@@ -141,21 +209,25 @@ class VehicleOperationsHandler:
                 break
 
         if not driver:
-            await query.edit_message_text(
-                f"❌ Error: No driver assigned to {vehicle.license_plate}.\n\n"
+            await update.message.reply_text(
+                f"❌ Error: No driver assigned to {vehicle_plate}.\n\n"
                 "Please assign a driver using /setup"
             )
             session.close()
             return ConversationHandler.END
 
         try:
-            # Record trip
-            request = RecordTripRequest(
-                group_id=group.id,
-                vehicle_id=vehicle_id,
-                driver_id=driver.id
-            )
-            response = self.record_trip_use_case.execute(request)
+            # Create multiple trips
+            created_trips = []
+            for i in range(trip_count):
+                request = RecordTripRequest(
+                    group_id=group.id,
+                    vehicle_id=vehicle_id,
+                    driver_id=driver.id,
+                    loading_size_cubic_meters=loading_size_per_trip
+                )
+                response = self.record_trip_use_case.execute(request)
+                created_trips.append(response)
 
             # Get total trips today
             from datetime import date
@@ -166,17 +238,25 @@ class VehicleOperationsHandler:
             type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
             emoji = type_emoji.get(vehicle.vehicle_type, "🚗")
 
-            await query.edit_message_text(
-                f"✅ Trip #{response.trip_number} recorded for {response.vehicle_license_plate}\n\n"
-                f"Vehicle: {emoji} {response.vehicle_license_plate}\n"
-                f"Driver: {response.driver_name}\n"
-                f"Date: {response.date}\n"
-                f"Time: {format_time_ict(datetime.fromisoformat(response.created_at))}\n\n"
+            # Get the last created trip for display
+            last_trip = created_trips[-1]
+            first_trip_num = created_trips[0].trip_number
+            last_trip_num = last_trip.trip_number
+
+            await update.message.reply_text(
+                f"✅ {trip_count} trips recorded for {last_trip.vehicle_license_plate}\n\n"
+                f"Vehicle: {emoji} {last_trip.vehicle_license_plate}\n"
+                f"Driver: {last_trip.driver_name}\n"
+                f"Trip numbers: #{first_trip_num} - #{last_trip_num}\n"
+                f"Loading per trip: {loading_size_per_trip:.2f}m³\n"
+                f"Total loading: {total_loading_size}m³\n"
+                f"Date: {last_trip.date}\n"
+                f"Time: {format_time_ict(datetime.fromisoformat(last_trip.created_at))}\n\n"
                 f"Total trips today: {total_today}"
             )
 
         except Exception as e:
-            await query.edit_message_text(f"❌ Error: {str(e)}")
+            await update.message.reply_text(f"❌ Error: {str(e)}")
         finally:
             session.close()
 

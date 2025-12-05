@@ -43,13 +43,16 @@ class GetMonthlyReportUseCase:
         # Aggregate data by vehicle
         vehicle_data: Dict[int, dict] = defaultdict(lambda: {
             'trip_count': 0,
+            'total_loading_size': 0.0,
             'total_fuel_liters': 0.0,
             'total_fuel_cost': 0.0
         })
 
-        # Count trips per vehicle
+        # Count trips and sum loading size per vehicle
         for trip in trips:
             vehicle_data[trip.vehicle_id]['trip_count'] += 1
+            if trip.loading_size_cubic_meters:
+                vehicle_data[trip.vehicle_id]['total_loading_size'] += trip.loading_size_cubic_meters
 
         # Sum fuel per vehicle
         for fuel_record in fuel_records:
@@ -88,6 +91,7 @@ class GetMonthlyReportUseCase:
                 vehicle_type=vehicle.vehicle_type,
                 driver_name=driver_name,
                 total_trips=data['trip_count'],
+                total_loading_size=data['total_loading_size'],
                 total_fuel_liters=data['total_fuel_liters'],
                 total_fuel_cost=data['total_fuel_cost'],
                 avg_trips_per_day=round(avg_trips_per_day, 1),
@@ -101,6 +105,7 @@ class GetMonthlyReportUseCase:
         return MonthlyReportResponse(
             year=year,
             month=month,
+            days_in_month=days_in_month,
             vehicles=vehicle_summaries,
             total_vehicles=len(vehicles),
             total_trips=total_trips,

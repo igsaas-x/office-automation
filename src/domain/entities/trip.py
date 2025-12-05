@@ -10,6 +10,7 @@ class Trip:
     driver_id: int
     date: date
     trip_number: int  # Auto-increments daily per vehicle
+    loading_size_cubic_meters: Optional[float]  # Loading size in cubic meters
     created_at: datetime
 
     @classmethod
@@ -19,7 +20,8 @@ class Trip:
         vehicle_id: int,
         driver_id: int,
         trip_date: date,
-        trip_number: int
+        trip_number: int,
+        loading_size_cubic_meters: Optional[float] = None
     ) -> 'Trip':
         return cls(
             id=None,
@@ -28,5 +30,6 @@ class Trip:
             driver_id=driver_id,
             date=trip_date,
             trip_number=trip_number,
+            loading_size_cubic_meters=loading_size_cubic_meters,
             created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )

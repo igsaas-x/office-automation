@@ -49,6 +49,7 @@ class GetVehiclePerformanceUseCase:
 
         # Calculate month totals
         month_total_trips = len(month_trips)
+        month_total_loading_size = sum(t.loading_size_cubic_meters or 0 for t in month_trips)
         month_total_fuel = sum(f.liters for f in month_fuel)
         month_total_cost = sum(f.cost for f in month_fuel)
 
@@ -70,12 +71,15 @@ class GetVehiclePerformanceUseCase:
         # Aggregate last 7 days by date
         daily_data: Dict[date, dict] = defaultdict(lambda: {
             'trips': 0,
+            'total_loading_size': 0.0,
             'fuel_liters': 0.0,
             'fuel_cost': 0.0
         })
 
         for trip in last_7_days_trips:
             daily_data[trip.date]['trips'] += 1
+            if trip.loading_size_cubic_meters:
+                daily_data[trip.date]['total_loading_size'] += trip.loading_size_cubic_meters
 
         for fuel in last_7_days_fuel:
             daily_data[fuel.date]['fuel_liters'] += fuel.liters
@@ -89,6 +93,7 @@ class GetVehiclePerformanceUseCase:
             daily_breakdowns.append(DailyBreakdown(
                 date=check_date.isoformat(),
                 trips=data['trips'],
+                total_loading_size=data['total_loading_size'],
                 fuel_liters=data['fuel_liters'],
                 fuel_cost=data['fuel_cost']
             ))
@@ -99,6 +104,7 @@ class GetVehiclePerformanceUseCase:
             vehicle_type=vehicle.vehicle_type,
             driver_name=driver_name,
             month_total_trips=month_total_trips,
+            month_total_loading_size=round(month_total_loading_size, 1),
             month_total_fuel=round(month_total_fuel, 1),
             month_total_cost=round(month_total_cost, 2),
             month_avg_trips_per_day=round(month_avg_trips_per_day, 1),

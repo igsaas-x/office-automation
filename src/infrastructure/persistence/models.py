@@ -148,6 +148,7 @@ class TripModel(Base):
     driver_id = Column(Integer, ForeignKey('drivers.id'), nullable=False)
     date = Column(Date, nullable=False)
     trip_number = Column(Integer, nullable=False)  # Auto-increments daily per vehicle
+    loading_size_cubic_meters = Column(Float, nullable=True)  # Loading size in cubic meters
     created_at = Column(DateTime, default=utc_now)
 
     group = relationship('GroupModel')

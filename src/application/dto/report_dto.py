@@ -8,6 +8,7 @@ class VehicleDailySummary:
     vehicle_type: str
     driver_name: Optional[str]
     trip_count: int
+    total_loading_size: float
     total_fuel_liters: float
     total_fuel_cost: float
 
@@ -44,6 +45,7 @@ class VehicleMonthlySummary:
     vehicle_type: str
     driver_name: Optional[str]
     total_trips: int
+    total_loading_size: float
     total_fuel_liters: float
     total_fuel_cost: float
     avg_trips_per_day: float
@@ -53,6 +55,7 @@ class VehicleMonthlySummary:
 class MonthlyReportResponse:
     year: int
     month: int
+    days_in_month: int
     vehicles: List[VehicleMonthlySummary]
     total_vehicles: int
     total_trips: int
@@ -63,6 +66,7 @@ class MonthlyReportResponse:
 class DailyBreakdown:
     date: str
     trips: int
+    total_loading_size: float
     fuel_liters: float
     fuel_cost: float
 
@@ -74,6 +78,7 @@ class VehiclePerformanceResponse:
     driver_name: Optional[str]
     # This month stats
     month_total_trips: int
+    month_total_loading_size: float
     month_total_fuel: float
     month_total_cost: float
     month_avg_trips_per_day: float

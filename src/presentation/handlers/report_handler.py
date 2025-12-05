@@ -86,8 +86,11 @@ class ReportHandler:
                         driver_name = vehicle_data.driver_name[-5:] if len(vehicle_data.driver_name) > 5 else vehicle_data.driver_name
                         vehicle_str += f"/{driver_name}"
 
-                    # Format trips column (centered, width 7)
-                    trips_str = f"{vehicle_data.trip_count:^5}"
+                    # Format trips column as "count/loadingm³"
+                    if vehicle_data.total_loading_size > 0:
+                        trips_str = f"{vehicle_data.trip_count}/{vehicle_data.total_loading_size:.0f}m³"
+                    else:
+                        trips_str = f"{vehicle_data.trip_count}"
 
                     # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
@@ -96,7 +99,7 @@ class ReportHandler:
                         fuel_str = "—"
 
                     # Build the row with pipe separators
-                    table_lines.append(f"{vehicle_str:<14}|{trips_str:^5}| {fuel_str}")
+                    table_lines.append(f"{vehicle_str:<14}|{trips_str:^11}| {fuel_str}")
 
                 message_parts.append("<pre>")
                 message_parts.append(escape('\n'.join(table_lines)))
@@ -180,9 +183,15 @@ class ReportHandler:
 
                 for vehicle_data in sorted_vehicles:
                     emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
+                    # Format trips as "count/loadingm³"
+                    if vehicle_data.total_loading_size > 0:
+                        trips_display = f"{vehicle_data.total_trips}/{vehicle_data.total_loading_size:.0f}m³"
+                    else:
+                        trips_display = f"{vehicle_data.total_trips}"
+
                     message_text += (
                         f"\n{emoji} {vehicle_data.license_plate}\n"
-                        f"  • Trips: {vehicle_data.total_trips}\n"
+                        f"  • Trips: {trips_display}\n"
                     )
                     if vehicle_data.total_fuel_liters > 0:
                         message_text += (
@@ -311,9 +320,15 @@ class ReportHandler:
             if report.driver_name:
                 message_text += f"👤 Driver: {report.driver_name}\n"
 
+            # Format trips as "count/loadingm³"
+            if report.month_total_loading_size > 0:
+                trips_display = f"{report.month_total_trips}/{report.month_total_loading_size:.0f}m³"
+            else:
+                trips_display = f"{report.month_total_trips}"
+
             message_text += (
                 f"\n📊 This Month Summary:\n"
-                f"• Total Trips: {report.month_total_trips}\n"
+                f"• Total Trips: {trips_display}\n"
             )
 
             if report.month_total_fuel > 0:
@@ -343,7 +358,12 @@ class ReportHandler:
                 if day_data.trips > 0 or day_data.fuel_liters > 0:
                     message_text += f"\n{day_name}:\n"
                     if day_data.trips > 0:
-                        message_text += f"  • Trips: {day_data.trips}\n"
+                        # Format trips as "count/loadingm³"
+                        if day_data.total_loading_size > 0:
+                            trips_display = f"{day_data.trips}/{day_data.total_loading_size:.0f}m³"
+                        else:
+                            trips_display = f"{day_data.trips}"
+                        message_text += f"  • Trips: {trips_display}\n"
                     if day_data.fuel_liters > 0:
                         message_text += f"  • Fuel: {day_data.fuel_liters}L (${day_data.fuel_cost:,.2f})\n"
 

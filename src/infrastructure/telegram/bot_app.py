@@ -37,6 +37,8 @@ from ...presentation.handlers.menu_handler import MenuHandler
 from ...presentation.handlers.vehicle_operations_handler import (
     VehicleOperationsHandler,
     SELECT_VEHICLE_FOR_TRIP,
+    ENTER_TRIP_COUNT,
+    ENTER_TOTAL_LOADING_SIZE,
     SELECT_VEHICLE_FOR_FUEL,
     ENTER_FUEL_LITERS,
     ENTER_FUEL_COST,
@@ -442,14 +444,36 @@ class BotApplication:
             session.close()
             return result
 
-        async def record_trip_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        async def select_trip_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
                 RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
                 RecordFuelUseCase(None, vehicle_repo),
                 vehicle_repo, driver_repo
             )
-            result = await vehicle_ops_handler.record_trip(update, context)
+            result = await vehicle_ops_handler.select_trip_vehicle(update, context)
+            session.close()
+            return result
+
+        async def receive_trip_count_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordFuelUseCase(None, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.receive_trip_count(update, context)
+            session.close()
+            return result
+
+        async def receive_total_loading_size_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
+            vehicle_ops_handler = VehicleOperationsHandler(
+                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordFuelUseCase(None, vehicle_repo),
+                vehicle_repo, driver_repo
+            )
+            result = await vehicle_ops_handler.receive_total_loading_size(update, context)
             session.close()
             return result
 
@@ -669,8 +693,14 @@ class BotApplication:
             ],
             states={
                 SELECT_VEHICLE_FOR_TRIP: [
-                    CallbackQueryHandler(record_trip_wrapper, pattern="^trip_vehicle_"),
+                    CallbackQueryHandler(select_trip_vehicle_wrapper, pattern="^trip_vehicle_"),
                     CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$")
+                ],
+                ENTER_TRIP_COUNT: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_trip_count_wrapper)
+                ],
+                ENTER_TOTAL_LOADING_SIZE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_total_loading_size_wrapper)
                 ],
             },
             fallbacks=[CommandHandler("cancel", self.cancel)],

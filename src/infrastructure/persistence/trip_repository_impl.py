@@ -23,6 +23,7 @@ class TripRepository(ITripRepository):
                 driver_id=trip.driver_id,
                 date=trip.date,
                 trip_number=trip.trip_number,
+                loading_size_cubic_meters=trip.loading_size_cubic_meters,
                 created_at=trip.created_at
             )
             self.session.add(db_trip)
@@ -96,5 +97,6 @@ class TripRepository(ITripRepository):
             driver_id=model.driver_id,
             date=model.date,
             trip_number=model.trip_number,
+            loading_size_cubic_meters=model.loading_size_cubic_meters,
             created_at=model.created_at
         )

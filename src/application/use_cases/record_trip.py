@@ -47,7 +47,8 @@ class RecordTripUseCase:
             vehicle_id=request.vehicle_id,
             driver_id=request.driver_id,
             trip_date=today,
-            trip_number=next_trip_number
+            trip_number=next_trip_number,
+            loading_size_cubic_meters=request.loading_size_cubic_meters
         )
 
         # Save to repository
@@ -66,6 +67,7 @@ class RecordTripUseCase:
             driver_id=saved_trip.driver_id,
             date=saved_trip.date.isoformat(),
             trip_number=saved_trip.trip_number,
+            loading_size_cubic_meters=saved_trip.loading_size_cubic_meters,
             created_at=saved_trip.created_at.isoformat(),
             vehicle_license_plate=vehicle.license_plate,
             driver_name=driver.name
