@@ -575,6 +575,7 @@ class BotApplication:
             """Handle daily operation menu button"""
             menu_handler = MenuHandler(check_in_enabled=False)
             await menu_handler.show_daily_operation_menu(update, context)
+            return ConversationHandler.END
 
         async def show_report_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle report menu button"""
@@ -654,7 +655,8 @@ class BotApplication:
             ],
             states={
                 SELECT_VEHICLE_FOR_TRIP: [
-                    CallbackQueryHandler(record_trip_wrapper, pattern="^trip_vehicle_")
+                    CallbackQueryHandler(record_trip_wrapper, pattern="^trip_vehicle_"),
+                    CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$")
                 ],
             },
             fallbacks=[CommandHandler("cancel", self.cancel)],
@@ -667,7 +669,8 @@ class BotApplication:
             ],
             states={
                 SELECT_VEHICLE_FOR_FUEL: [
-                    CallbackQueryHandler(select_fuel_vehicle_wrapper, pattern="^fuel_vehicle_")
+                    CallbackQueryHandler(select_fuel_vehicle_wrapper, pattern="^fuel_vehicle_"),
+                    CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$")
                 ],
                 ENTER_FUEL_LITERS: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fuel_liters_wrapper)

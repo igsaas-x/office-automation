@@ -93,6 +93,7 @@ class VehicleOperationsHandler:
                 InlineKeyboardButton(label, callback_data=f"trip_vehicle_{vehicle.id}")
             ])
 
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="menu_daily_operation")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message_text = "🚚 Record Trip\n\nSelect vehicle:"
@@ -233,6 +234,7 @@ class VehicleOperationsHandler:
                 )
             ])
 
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="menu_daily_operation")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         message_text = "⛽ Record Fuel\n\nSelect vehicle:"
 
