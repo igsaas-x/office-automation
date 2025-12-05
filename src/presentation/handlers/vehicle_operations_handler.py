@@ -278,8 +278,8 @@ class VehicleOperationsHandler:
 
             await update.message.reply_text(
                 f"Liters: {liters}L\n\n"
-                "Please enter the cost (រៀល/Dollar):\n"
-                "Example: 250000 or 250000.50"
+                "Please enter the cost (Dollar):\n"
+                "Example: 50 or 50.25"
             )
 
             return ENTER_FUEL_COST
@@ -304,7 +304,7 @@ class VehicleOperationsHandler:
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                f"Cost: {cost:,.0f} រៀល\n\n"
+                f"Cost: ${cost:,.2f}\n\n"
                 "Upload receipt photo (optional):\n"
                 "Send a photo or click Skip",
                 reply_markup=reply_markup
@@ -371,7 +371,7 @@ class VehicleOperationsHandler:
                 f"⛽ Fuel recorded for {vehicle_plate}\n\n"
                 f"Date: {response.date}\n"
                 f"Liters: {response.liters}L\n"
-                f"Cost: {response.cost:,.0f} រៀល\n"
+                f"Cost: ${response.cost:,.2f}\n"
                 f"Receipt: {receipt_status}"
             )
 

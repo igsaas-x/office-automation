@@ -67,7 +67,7 @@ class ReportHandler:
                 "📊 Summary:",
                 f"• Total Trips: {report.total_trips}",
                 f"• Total Fuel: {report.total_fuel_liters}L",
-                f"• Total Cost: {report.total_fuel_cost:,.0f} រៀល",
+                f"• Total Cost: ${report.total_fuel_cost:,.2f}",
                 ""
             ]
 
@@ -82,7 +82,7 @@ class ReportHandler:
                     message_parts.append(f"  • Trips: {vehicle_data.trip_count}")
                     if vehicle_data.total_fuel_liters > 0:
                         message_parts.append(
-                            f"  • Fuel: {vehicle_data.total_fuel_liters}L ({vehicle_data.total_fuel_cost:,.0f} រៀល)"
+                            f"  • Fuel: {vehicle_data.total_fuel_liters}L (${vehicle_data.total_fuel_cost:,.2f})"
                         )
                     if vehicle_data.driver_name:
                         message_parts.append(f"  • Driver: {escape(vehicle_data.driver_name)}")
@@ -104,7 +104,7 @@ class ReportHandler:
                     for fuel in vehicle_fuels:
                         time_str = format_time_ict(datetime.fromisoformat(fuel.created_at)) if fuel.created_at else ""
                         fuel_lines.append(
-                            f"{fuel.liters:.1f}L ({fuel.cost:,.0f} រៀល) at {time_str}"
+                            f"{fuel.liters:.1f}L (${fuel.cost:,.2f}) at {time_str}"
                         )
 
                     message_parts.append("\n⛽ Fuel Records:")
@@ -178,7 +178,7 @@ class ReportHandler:
                 f"• Total Vehicles: {report.total_vehicles}\n"
                 f"• Total Trips: {report.total_trips}\n"
                 f"• Total Fuel: {report.total_fuel_liters}L\n"
-                f"• Total Cost: {report.total_fuel_cost:,.0f} រៀល\n"
+                f"• Total Cost: ${report.total_fuel_cost:,.2f}\n"
             )
 
             if report.total_trips > 0:
@@ -201,7 +201,7 @@ class ReportHandler:
                     if vehicle_data.total_fuel_liters > 0:
                         message_text += (
                             f"  • Fuel: {vehicle_data.total_fuel_liters}L\n"
-                            f"  • Cost: {vehicle_data.total_fuel_cost:,.0f} រៀល\n"
+                            f"  • Cost: ${vehicle_data.total_fuel_cost:,.2f}\n"
                         )
                         if vehicle_data.total_trips > 0:
                             avg_fuel_per_trip = vehicle_data.total_fuel_liters / vehicle_data.total_trips
@@ -333,7 +333,7 @@ class ReportHandler:
             if report.month_total_fuel > 0:
                 message_text += (
                     f"• Total Fuel: {report.month_total_fuel}L\n"
-                    f"• Total Cost: {report.month_total_cost:,.0f} រៀល\n"
+                    f"• Total Cost: ${report.month_total_cost:,.2f}\n"
                 )
 
             message_text += (
@@ -343,7 +343,7 @@ class ReportHandler:
             if report.month_avg_fuel_per_trip > 0:
                 message_text += (
                     f"• Avg Fuel/Trip: {report.month_avg_fuel_per_trip:.1f}L\n"
-                    f"• Avg Cost/Trip: {report.month_avg_cost_per_trip:,.0f} រៀល\n"
+                    f"• Avg Cost/Trip: ${report.month_avg_cost_per_trip:,.2f}\n"
                 )
 
             # Show last 7 days breakdown
@@ -359,7 +359,7 @@ class ReportHandler:
                     if day_data.trips > 0:
                         message_text += f"  • Trips: {day_data.trips}\n"
                     if day_data.fuel_liters > 0:
-                        message_text += f"  • Fuel: {day_data.fuel_liters}L ({day_data.fuel_cost:,.0f} រៀល)\n"
+                        message_text += f"  • Fuel: {day_data.fuel_liters}L (${day_data.fuel_cost:,.2f})\n"
 
             # Display report without buttons (end of session)
             await query.edit_message_text(message_text)
