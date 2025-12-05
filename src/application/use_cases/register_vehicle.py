@@ -24,7 +24,8 @@ class RegisterVehicleUseCase:
         vehicle = Vehicle.create(
             group_id=request.group_id,
             license_plate=request.license_plate,
-            vehicle_type=request.vehicle_type.upper()
+            vehicle_type=request.vehicle_type.upper(),
+            driver_name=request.driver_name
         )
 
         # Save to repository
@@ -35,5 +36,6 @@ class RegisterVehicleUseCase:
             group_id=saved_vehicle.group_id,
             license_plate=saved_vehicle.license_plate,
             vehicle_type=saved_vehicle.vehicle_type,
+            driver_name=saved_vehicle.driver_name,
             created_at=saved_vehicle.created_at.isoformat()
         )

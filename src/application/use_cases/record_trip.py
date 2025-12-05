@@ -2,19 +2,16 @@ from datetime import date
 from ...domain.entities.trip import Trip
 from ...domain.repositories.trip_repository import ITripRepository
 from ...domain.repositories.vehicle_repository import IVehicleRepository
-from ...domain.repositories.driver_repository import IDriverRepository
 from ..dto.trip_dto import RecordTripRequest, TripResponse
 
 class RecordTripUseCase:
     def __init__(
         self,
         trip_repository: ITripRepository,
-        vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository
+        vehicle_repository: IVehicleRepository
     ):
         self.trip_repository = trip_repository
         self.vehicle_repository = vehicle_repository
-        self.driver_repository = driver_repository
 
     def execute(self, request: RecordTripRequest) -> TripResponse:
         # Validate vehicle exists and belongs to group
@@ -23,13 +20,6 @@ class RecordTripUseCase:
             raise ValueError(f"Vehicle with ID {request.vehicle_id} not found")
         if vehicle.group_id != request.group_id:
             raise ValueError("Vehicle does not belong to this group")
-
-        # Validate driver exists and belongs to group
-        driver = self.driver_repository.find_by_id(request.driver_id)
-        if not driver:
-            raise ValueError(f"Driver with ID {request.driver_id} not found")
-        if driver.group_id != request.group_id:
-            raise ValueError("Driver does not belong to this group")
 
         # Get today's date
         today = date.today()
@@ -41,11 +31,11 @@ class RecordTripUseCase:
         )
         next_trip_number = max_trip_number + 1
 
-        # Create new trip
+        # Create new trip (snapshot driver name from vehicle)
         trip = Trip.create(
             group_id=request.group_id,
             vehicle_id=request.vehicle_id,
-            driver_id=request.driver_id,
+            driver_name=vehicle.driver_name,
             trip_date=today,
             trip_number=next_trip_number,
             loading_size_cubic_meters=request.loading_size_cubic_meters
@@ -64,11 +54,10 @@ class RecordTripUseCase:
             id=saved_trip.id,
             group_id=saved_trip.group_id,
             vehicle_id=saved_trip.vehicle_id,
-            driver_id=saved_trip.driver_id,
+            driver_name=saved_trip.driver_name,
             date=saved_trip.date.isoformat(),
             trip_number=saved_trip.trip_number,
             loading_size_cubic_meters=saved_trip.loading_size_cubic_meters,
             created_at=saved_trip.created_at.isoformat(),
-            vehicle_license_plate=vehicle.license_plate,
-            driver_name=driver.name
+            vehicle_license_plate=vehicle.license_plate
         )

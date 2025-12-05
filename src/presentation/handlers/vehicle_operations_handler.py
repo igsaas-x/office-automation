@@ -6,7 +6,6 @@ from ...application.use_cases.record_fuel import RecordFuelUseCase
 from ...application.dto.trip_dto import RecordTripRequest
 from ...application.dto.fuel_dto import RecordFuelRequest
 from ...domain.repositories.vehicle_repository import IVehicleRepository
-from ...domain.repositories.driver_repository import IDriverRepository
 from ...infrastructure.utils.datetime_utils import format_time_ict
 
 # Conversation states
@@ -23,13 +22,11 @@ class VehicleOperationsHandler:
         self,
         record_trip_use_case: RecordTripUseCase,
         record_fuel_use_case: RecordFuelUseCase,
-        vehicle_repository: IVehicleRepository,
-        driver_repository: IDriverRepository
+        vehicle_repository: IVehicleRepository
     ):
         self.record_trip_use_case = record_trip_use_case
         self.record_fuel_use_case = record_fuel_use_case
         self.vehicle_repository = vehicle_repository
-        self.driver_repository = driver_repository
 
     # ==================== Trip Recording ====================
 
@@ -193,26 +190,10 @@ class VehicleOperationsHandler:
             session.close()
             return ConversationHandler.END
 
-        # Get vehicle and driver
+        # Get vehicle
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
             await update.message.reply_text("❌ Error: Vehicle not found.")
-            session.close()
-            return ConversationHandler.END
-
-        # Find driver assigned to this vehicle
-        drivers = self.driver_repository.find_by_group_id(group.id)
-        driver = None
-        for d in drivers:
-            if d.assigned_vehicle_id == vehicle_id:
-                driver = d
-                break
-
-        if not driver:
-            await update.message.reply_text(
-                f"❌ Error: No driver assigned to {vehicle_plate}.\n\n"
-                "Please assign a driver using /setup"
-            )
             session.close()
             return ConversationHandler.END
 
@@ -223,7 +204,6 @@ class VehicleOperationsHandler:
                 request = RecordTripRequest(
                     group_id=group.id,
                     vehicle_id=vehicle_id,
-                    driver_id=driver.id,
                     loading_size_cubic_meters=loading_size_per_trip
                 )
                 response = self.record_trip_use_case.execute(request)
@@ -243,17 +223,24 @@ class VehicleOperationsHandler:
             first_trip_num = created_trips[0].trip_number
             last_trip_num = last_trip.trip_number
 
-            await update.message.reply_text(
-                f"✅ {trip_count} trips recorded for {last_trip.vehicle_license_plate}\n\n"
-                f"Vehicle: {emoji} {last_trip.vehicle_license_plate}\n"
-                f"Driver: {last_trip.driver_name}\n"
-                f"Trip numbers: #{first_trip_num} - #{last_trip_num}\n"
-                f"Loading per trip: {loading_size_per_trip:.2f}m³\n"
-                f"Total loading: {total_loading_size}m³\n"
-                f"Date: {last_trip.date}\n"
-                f"Time: {format_time_ict(datetime.fromisoformat(last_trip.created_at))}\n\n"
+            message_parts = [
+                f"✅ {trip_count} trips recorded for {last_trip.vehicle_license_plate}\n",
+                f"Vehicle: {emoji} {last_trip.vehicle_license_plate}"
+            ]
+
+            if last_trip.driver_name:
+                message_parts.append(f"Driver: {last_trip.driver_name}")
+
+            message_parts.extend([
+                f"Trip numbers: #{first_trip_num} - #{last_trip_num}",
+                f"Loading per trip: {loading_size_per_trip:.2f}m³",
+                f"Total loading: {total_loading_size}m³",
+                f"Date: {last_trip.date}",
+                f"Time: {format_time_ict(datetime.fromisoformat(last_trip.created_at))}\n",
                 f"Total trips today: {total_today}"
-            )
+            ])
+
+            await update.message.reply_text("\n".join(message_parts))
 
         except Exception as e:
             await update.message.reply_text(f"❌ Error: {str(e)}")

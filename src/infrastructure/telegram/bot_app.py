@@ -447,9 +447,9 @@ class BotApplication:
         async def select_trip_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordTripUseCase(trip_repo, vehicle_repo),
                 RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.select_trip_vehicle(update, context)
             session.close()
@@ -458,9 +458,9 @@ class BotApplication:
         async def receive_trip_count_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordTripUseCase(trip_repo, vehicle_repo),
                 RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.receive_trip_count(update, context)
             session.close()
@@ -469,9 +469,9 @@ class BotApplication:
         async def receive_total_loading_size_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, trip_repo, _ = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo, driver_repo),
+                RecordTripUseCase(trip_repo, vehicle_repo),
                 RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.receive_total_loading_size(update, context)
             session.close()
@@ -480,9 +480,9 @@ class BotApplication:
         async def start_fuel_recording_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordTripUseCase(None, vehicle_repo),
                 RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.start_fuel_recording(update, context)
             session.close()
@@ -491,9 +491,9 @@ class BotApplication:
         async def select_fuel_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordTripUseCase(None, vehicle_repo),
                 RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.select_fuel_vehicle(update, context)
             session.close()
@@ -502,9 +502,9 @@ class BotApplication:
         async def receive_fuel_liters_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordTripUseCase(None, vehicle_repo),
                 RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.receive_fuel_liters(update, context)
             session.close()
@@ -513,9 +513,9 @@ class BotApplication:
         async def receive_fuel_cost_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordTripUseCase(None, vehicle_repo),
                 RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.receive_fuel_cost(update, context)
             session.close()
@@ -524,9 +524,9 @@ class BotApplication:
         async def complete_fuel_record_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, _, _, _, _, _, vehicle_repo, driver_repo, _, fuel_repo = self._get_repositories()
             vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo, driver_repo),
+                RecordTripUseCase(None, vehicle_repo),
                 RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo, driver_repo
+                vehicle_repo
             )
             result = await vehicle_ops_handler.complete_fuel_record(update, context)
             session.close()

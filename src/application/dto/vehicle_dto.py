@@ -6,6 +6,7 @@ class RegisterVehicleRequest:
     group_id: int
     license_plate: str
     vehicle_type: str  # TRUCK, VAN, MOTORCYCLE, CAR
+    driver_name: Optional[str] = None  # Optional driver name
 
 @dataclass
 class VehicleResponse:
@@ -13,6 +14,7 @@ class VehicleResponse:
     group_id: int
     license_plate: str
     vehicle_type: str
+    driver_name: Optional[str]
     created_at: str
 
 

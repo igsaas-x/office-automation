@@ -107,35 +107,15 @@ class VehicleModel(Base):
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     license_plate = Column(String(20), nullable=False)
     vehicle_type = Column(String(20), nullable=False)  # TRUCK, VAN, MOTORCYCLE, CAR
+    driver_name = Column(String(100), nullable=True)  # Optional driver name
     created_at = Column(DateTime, default=utc_now)
 
     group = relationship('GroupModel')
-    drivers = relationship('DriverModel', back_populates='assigned_vehicle')
     trips = relationship('TripModel', back_populates='vehicle')
     fuel_records = relationship('FuelRecordModel', back_populates='vehicle')
 
     __table_args__ = (
         UniqueConstraint('group_id', 'license_plate', name='uq_group_license_plate'),
-    )
-
-
-class DriverModel(Base):
-    __tablename__ = 'drivers'
-
-    id = Column(Integer, primary_key=True)
-    group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
-    name = Column(String(100), nullable=False)
-    phone = Column(String(20), nullable=False)
-    role = Column(String(20), nullable=False, default='DRIVER')
-    assigned_vehicle_id = Column(Integer, ForeignKey('vehicles.id'), nullable=True)
-    created_at = Column(DateTime, default=utc_now)
-
-    group = relationship('GroupModel')
-    assigned_vehicle = relationship('VehicleModel', back_populates='drivers')
-    trips = relationship('TripModel', back_populates='driver')
-
-    __table_args__ = (
-        UniqueConstraint('group_id', 'phone', name='uq_group_phone'),
     )
 
 
@@ -145,7 +125,7 @@ class TripModel(Base):
     id = Column(Integer, primary_key=True)
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     vehicle_id = Column(Integer, ForeignKey('vehicles.id'), nullable=False)
-    driver_id = Column(Integer, ForeignKey('drivers.id'), nullable=False)
+    driver_name = Column(String(100), nullable=True)  # Snapshot of driver name at trip creation
     date = Column(Date, nullable=False)
     trip_number = Column(Integer, nullable=False)  # Auto-increments daily per vehicle
     loading_size_cubic_meters = Column(Float, nullable=True)  # Loading size in cubic meters
@@ -153,7 +133,6 @@ class TripModel(Base):
 
     group = relationship('GroupModel')
     vehicle = relationship('VehicleModel', back_populates='trips')
-    driver = relationship('DriverModel', back_populates='trips')
 
     __table_args__ = (
         UniqueConstraint('vehicle_id', 'date', 'trip_number', name='uq_vehicle_date_trip_number'),

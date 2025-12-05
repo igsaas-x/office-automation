@@ -14,12 +14,14 @@ class VehicleRepository(IVehicleRepository):
             db_vehicle = self.session.query(VehicleModel).filter_by(id=vehicle.id).first()
             db_vehicle.license_plate = vehicle.license_plate
             db_vehicle.vehicle_type = vehicle.vehicle_type
+            db_vehicle.driver_name = vehicle.driver_name
         else:
             # Create new
             db_vehicle = VehicleModel(
                 group_id=vehicle.group_id,
                 license_plate=vehicle.license_plate,
                 vehicle_type=vehicle.vehicle_type,
+                driver_name=vehicle.driver_name,
                 created_at=vehicle.created_at
             )
             self.session.add(db_vehicle)
@@ -63,5 +65,6 @@ class VehicleRepository(IVehicleRepository):
             group_id=model.group_id,
             license_plate=model.license_plate,
             vehicle_type=model.vehicle_type,
+            driver_name=model.driver_name,
             created_at=model.created_at
         )

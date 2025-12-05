@@ -20,7 +20,7 @@ class TripRepository(ITripRepository):
             db_trip = TripModel(
                 group_id=trip.group_id,
                 vehicle_id=trip.vehicle_id,
-                driver_id=trip.driver_id,
+                driver_name=trip.driver_name,
                 date=trip.date,
                 trip_number=trip.trip_number,
                 loading_size_cubic_meters=trip.loading_size_cubic_meters,
@@ -94,7 +94,7 @@ class TripRepository(ITripRepository):
             id=model.id,
             group_id=model.group_id,
             vehicle_id=model.vehicle_id,
-            driver_id=model.driver_id,
+            driver_name=model.driver_name,
             date=model.date,
             trip_number=model.trip_number,
             loading_size_cubic_meters=model.loading_size_cubic_meters,
