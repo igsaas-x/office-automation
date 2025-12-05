@@ -1,14 +1,13 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler
-from datetime import date, datetime
+from datetime import date
 from html import escape
 from ...application.use_cases.get_daily_report import GetDailyReportUseCase
 from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
 from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
 from ...domain.repositories.vehicle_repository import IVehicleRepository
 from ...domain.repositories.driver_repository import IDriverRepository
-from ...infrastructure.utils.datetime_utils import format_time_ict
 
 # Conversation states
 SELECT_VEHICLE_FOR_PERFORMANCE = 51
@@ -76,45 +75,34 @@ class ReportHandler:
             else:
                 type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
 
-                for idx, vehicle_data in enumerate(report.vehicles):
+                # Create consolidated table
+                table_lines = []
+                table_lines.append("Vehicle / Driver          Trips    Fuel (L / $)")
+                table_lines.append("")
+
+                for vehicle_data in report.vehicles:
                     emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
-                    message_parts.append(f"{emoji} {escape(vehicle_data.license_plate)}")
-                    message_parts.append(f"  • Trips: {vehicle_data.trip_count}")
-                    if vehicle_data.total_fuel_liters > 0:
-                        message_parts.append(
-                            f"  • Fuel: {vehicle_data.total_fuel_liters}L (${vehicle_data.total_fuel_cost:,.2f})"
-                        )
+
+                    # Format vehicle/driver column (max 25 chars for alignment)
+                    vehicle_str = f"{emoji} {vehicle_data.license_plate}"
                     if vehicle_data.driver_name:
-                        message_parts.append(f"  • Driver: {escape(vehicle_data.driver_name)}")
+                        vehicle_str += f" — {vehicle_data.driver_name}"
 
-                    vehicle_trips = [t for t in report.trips if t.vehicle_plate == vehicle_data.license_plate]
-                    trip_lines = []
-                    for trip in vehicle_trips:
-                        time_str = format_time_ict(datetime.fromisoformat(trip.created_at)) if trip.created_at else ""
-                        trip_lines.append(f"Trip #{trip.trip_number} at {time_str}")
+                    # Format trips column (centered, width 9)
+                    trips_str = str(vehicle_data.trip_count)
 
-                    message_parts.append("\n🛣️ Trips Today:")
-                    if trip_lines:
-                        message_parts.append(f"<pre>{escape('\n'.join(trip_lines))}</pre>")
+                    # Format fuel column
+                    if vehicle_data.total_fuel_liters > 0:
+                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L / {vehicle_data.total_fuel_cost:.0f}$"
                     else:
-                        message_parts.append("<pre>None recorded</pre>")
+                        fuel_str = "—"
 
-                    vehicle_fuels = [f for f in report.fuel_records if f.vehicle_plate == vehicle_data.license_plate]
-                    fuel_lines = []
-                    for fuel in vehicle_fuels:
-                        time_str = format_time_ict(datetime.fromisoformat(fuel.created_at)) if fuel.created_at else ""
-                        fuel_lines.append(
-                            f"{fuel.liters:.1f}L (${fuel.cost:,.2f}) at {time_str}"
-                        )
+                    # Build the row with proper spacing
+                    table_lines.append(f"{vehicle_str:<25} {trips_str:<8} {fuel_str}")
 
-                    message_parts.append("\n⛽ Fuel Records:")
-                    if fuel_lines:
-                        message_parts.append(f"<pre>{escape('\n'.join(fuel_lines))}</pre>")
-                    else:
-                        message_parts.append("<pre>None recorded</pre>")
-
-                    if idx < len(report.vehicles) - 1:
-                        message_parts.append("")
+                message_parts.append("<pre>")
+                message_parts.append(escape('\n'.join(table_lines)))
+                message_parts.append("</pre>")
 
             message_text = "\n".join(message_parts)
 
