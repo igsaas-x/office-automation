@@ -345,7 +345,7 @@ class BotApplication:
                 RegisterGroupUseCase(group_repo) if include_group else None,
                 vehicle_repo,
                 None,  # driver_repo - driver functionality removed
-                DeleteVehicleUseCase(vehicle_repo, None, trip_repo, fuel_repo),
+                DeleteVehicleUseCase(vehicle_repo, trip_repo, fuel_repo),
                 None  # DeleteDriverUseCase - driver functionality removed
             )
             return session, setup_handler

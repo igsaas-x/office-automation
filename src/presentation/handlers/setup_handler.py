@@ -27,7 +27,7 @@ class SetupHandler:
         register_vehicle_use_case: RegisterVehicleUseCase,
         register_driver_use_case: Optional[RegisterDriverUseCase] = None,
         register_group_use_case: Optional[RegisterGroupUseCase] = None,
-        vehicle_repository: Optional[IVehicleRepository] = None,
+        vehicle_repository: IVehicleRepository = None,
         driver_repository: Optional[IDriverRepository] = None,
         delete_vehicle_use_case: Optional[DeleteVehicleUseCase] = None,
         delete_driver_use_case: Optional[DeleteDriverUseCase] = None
