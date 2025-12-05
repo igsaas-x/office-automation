@@ -75,8 +75,8 @@ class ReportHandler:
             else:
                 # Create consolidated table
                 table_lines = []
-                table_lines.append(" Vehicle/Driver | Trips | Fuel(L/$)")
-                table_lines.append(" ----------------------------------")
+                table_lines.append("Vehicle/Driver|Trips|Fuel(L/$)")
+                table_lines.append("-------------------------------")
 
                 for vehicle_data in report.vehicles:
                     # Format vehicle/driver column
@@ -96,7 +96,7 @@ class ReportHandler:
                         fuel_str = "—"
 
                     # Build the row with pipe separators
-                    table_lines.append(f" {vehicle_str:<14}| {trips_str} | {fuel_str}")
+                    table_lines.append(f"{vehicle_str:<14}|{trips_str:^5}| {fuel_str}")
 
                 message_parts.append("<pre>")
                 message_parts.append(escape('\n'.join(table_lines)))
