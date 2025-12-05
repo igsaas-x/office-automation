@@ -73,32 +73,30 @@ class ReportHandler:
             if not report.vehicles:
                 message_parts.append("⚠️ No activity recorded for today.")
             else:
-                type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
-
                 # Create consolidated table
                 table_lines = []
-                table_lines.append("Vehicle / Driver          Trips    Fuel (L / $)")
-                table_lines.append("")
+                table_lines.append(" Vehicle/Driver | Trips | Fuel(L/$)")
+                table_lines.append(" ----------------------------------")
 
                 for vehicle_data in report.vehicles:
-                    emoji = type_emoji.get(vehicle_data.vehicle_type, "🚗")
-
-                    # Format vehicle/driver column (max 25 chars for alignment)
-                    vehicle_str = f"{emoji} {vehicle_data.license_plate}"
+                    # Format vehicle/driver column
+                    vehicle_str = f"{vehicle_data.license_plate}"
                     if vehicle_data.driver_name:
-                        vehicle_str += f" — {vehicle_data.driver_name}"
+                        # Show last 5 chars of driver name if longer than 5
+                        driver_name = vehicle_data.driver_name[-5:] if len(vehicle_data.driver_name) > 5 else vehicle_data.driver_name
+                        vehicle_str += f"/{driver_name}"
 
-                    # Format trips column (centered, width 9)
-                    trips_str = str(vehicle_data.trip_count)
+                    # Format trips column (centered, width 7)
+                    trips_str = f"{vehicle_data.trip_count:^5}"
 
                     # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
-                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L / {vehicle_data.total_fuel_cost:.0f}$"
+                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L/{vehicle_data.total_fuel_cost:.0f}$"
                     else:
                         fuel_str = "—"
 
-                    # Build the row with proper spacing
-                    table_lines.append(f"{vehicle_str:<25} {trips_str:<8} {fuel_str}")
+                    # Build the row with pipe separators
+                    table_lines.append(f" {vehicle_str:<14}| {trips_str} | {fuel_str}")
 
                 message_parts.append("<pre>")
                 message_parts.append(escape('\n'.join(table_lines)))
