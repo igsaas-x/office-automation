@@ -73,7 +73,8 @@ class SetupHandler:
             [InlineKeyboardButton("🚗 Setup Vehicle", callback_data="setup_vehicle")],
             [InlineKeyboardButton("📋 List Vehicles", callback_data="list_vehicles")],
             [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")],
-            [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")]
+            [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_setup")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 

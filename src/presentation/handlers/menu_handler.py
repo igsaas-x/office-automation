@@ -22,6 +22,7 @@ class MenuHandler:
         # Main menu buttons with submenus
         keyboard.append([InlineKeyboardButton("📋 Daily Operation", callback_data="menu_daily_operation")])
         keyboard.append([InlineKeyboardButton("📊 Report", callback_data="menu_report")])
+        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_menu")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 

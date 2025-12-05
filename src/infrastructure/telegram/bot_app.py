@@ -582,6 +582,19 @@ class BotApplication:
             menu_handler = MenuHandler(check_in_enabled=False)
             await menu_handler.show_report_menu(update, context)
 
+        async def cancel_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle cancel button from main menu"""
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text("❌ Menu cancelled.")
+
+        async def cancel_setup_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle cancel button from setup menu"""
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text("❌ Setup cancelled.")
+            return ConversationHandler.END
+
         # Registration conversation handler
         registration_conv = ConversationHandler(
             entry_points=[
@@ -628,6 +641,7 @@ class BotApplication:
                     CallbackQueryHandler(setup_delete_vehicle_wrapper, pattern="^delete_vehicle_"),
                     CallbackQueryHandler(setup_delete_driver_wrapper, pattern="^delete_driver_"),
                     CallbackQueryHandler(setup_back_to_menu_wrapper, pattern="^back_to_setup$"),
+                    CallbackQueryHandler(cancel_setup_wrapper, pattern="^cancel_setup$"),
                 ],
                 SETUP_VEHICLE_PLATE: [
                     MessageHandler(filters.TEXT & ~filters.COMMAND, setup_vehicle_plate_wrapper)
@@ -726,6 +740,9 @@ class BotApplication:
         # Add submenu handlers
         self.app.add_handler(CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$"))
         self.app.add_handler(CallbackQueryHandler(show_report_menu_wrapper, pattern="^menu_report$"))
+
+        # Add cancel handlers
+        self.app.add_handler(CallbackQueryHandler(cancel_menu_wrapper, pattern="^cancel_menu$"))
 
     def run(self):
         """Start the bot"""
