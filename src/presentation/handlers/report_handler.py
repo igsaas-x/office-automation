@@ -99,7 +99,7 @@ class ReportHandler:
                         fuel_str = "—"
 
                     # Build the row with pipe separators and centered alignment
-                    table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
+                    table_lines.append(f"{vehicle_str:<9}|{trips_str:^11}| {fuel_str}")
 
                     # Accumulate totals
                     total_trips += vehicle_data.trip_count
@@ -229,7 +229,7 @@ class ReportHandler:
                         fuel_str = "—"
 
                     # Build the row with pipe separators and centered alignment
-                    table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
+                    table_lines.append(f"{vehicle_str:<9}|{trips_str:^11}| {fuel_str}")
 
                     # Accumulate totals
                     total_trips += vehicle_data.total_trips
