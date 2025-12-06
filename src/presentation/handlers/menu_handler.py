@@ -36,8 +36,8 @@ class MenuHandler:
     async def show_daily_operation_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show daily operation submenu"""
         keyboard = [
-            [InlineKeyboardButton("⛽ បន្ថែមកំណត់ត្រាសាំង", callback_data="add_fuel")],
-            [InlineKeyboardButton("🚚 បន្ថែមកំណត់ត្រាដំណើរ", callback_data="add_trip")],
+            [InlineKeyboardButton("⛽ កត់ត្រាសាំង", callback_data="add_fuel")],
+            [InlineKeyboardButton("🚚 កត់ត្រាចំនួនដឹក", callback_data="add_trip")],
             [InlineKeyboardButton("🔙 ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")]
         ]
 
