@@ -63,7 +63,6 @@ class ReportHandler:
             # Format report message
             message_parts = [
                 f"📅 របាយការណ៍ប្រចាំថ្ងៃ - {escape(report.date)}",
-                "",
                 # "📊 សង្ខេប:",
                 # f"• ដំណើរសរុប: {report.total_trips}",
                 # f"• សាំងសរុប: {report.total_fuel_liters}L",
@@ -75,9 +74,8 @@ class ReportHandler:
                 message_parts.append("⚠️ គ្មានសកម្មភាពកត់ត្រាសម្រាប់ថ្ងៃនេះទេ។")
             else:
                 # Create consolidated table
-                table_lines = []
-                table_lines.append("   ឡាន       ចំនួនដឹក      ប្រេង($)")
-                table_lines.append("--------------------------------")
+                table_lines = ["   ឡាន       ចំនួនដឹក      ប្រេង($)",
+                               "--------------------------------"]
 
                 for vehicle_data in report.vehicles:
                     # Format vehicle column (plate number only)
@@ -159,7 +157,7 @@ class ReportHandler:
             }
 
             message_text = (
-                f"📆 របាយការណ៍ប្រចាំខែ - {month_names[report.month]} {report.year}\n\n"
+                f"📆 របាយការណ៍ប្រចាំខែ - {month_names[report.month]} {report.year}\n"
                 # f"📊 សង្ខេប:\n"
                 # f"• យានជំនិះសរុប: {report.total_vehicles}\n"
                 # f"• ដំណើរសរុប: {report.total_trips}\n"
@@ -172,7 +170,6 @@ class ReportHandler:
             #     message_text += f"• មធ្យមដំណើរ/ថ្ងៃ: {avg_trips_per_day:.1f}\n"
 
             if report.vehicles:
-                message_text += "\n"
 
                 # Create table
                 table_lines = []
