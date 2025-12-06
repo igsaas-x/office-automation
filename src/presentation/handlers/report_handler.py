@@ -76,7 +76,7 @@ class ReportHandler:
             else:
                 # Create consolidated table
                 table_lines = []
-                table_lines.append("   ឡាន       ចំនួនដឹក      ប្រេង(L/$)")
+                table_lines.append("   ឡាន       ចំនួនដឹក      ប្រេង($)")
                 table_lines.append("--------------------------------")
 
                 for vehicle_data in report.vehicles:
@@ -91,7 +91,7 @@ class ReportHandler:
 
                     # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
-                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L/{vehicle_data.total_fuel_cost:.0f}$"
+                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L({vehicle_data.total_fuel_cost:.0f}$)"
                     else:
                         fuel_str = "—"
 
@@ -167,9 +167,9 @@ class ReportHandler:
                 # f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}\n"
             )
 
-            if report.total_trips > 0:
-                avg_trips_per_day = report.total_trips / report.days_in_month
-                message_text += f"• មធ្យមដំណើរ/ថ្ងៃ: {avg_trips_per_day:.1f}\n"
+            # if report.total_trips > 0:
+            #     avg_trips_per_day = report.total_trips / report.days_in_month
+            #     message_text += f"• មធ្យមដំណើរ/ថ្ងៃ: {avg_trips_per_day:.1f}\n"
 
             if report.vehicles:
                 message_text += "\n"
@@ -177,7 +177,7 @@ class ReportHandler:
                 # Create table
                 table_lines = []
                 # table_lines.append("យានជំនិះ  |   ដំណើរ   | សាំង(L/$)")
-                table_lines.append("    ឡាន      ចំនួនដឹក      ប្រេង(L/$)")
+                table_lines.append("    ឡាន      ចំនួនដឹក      ប្រេង($)")
                 table_lines.append("--------------------------------")
 
                 # Sort by total trips descending
@@ -189,13 +189,13 @@ class ReportHandler:
 
                     # Format trips column as "count/loadingm³"
                     if vehicle_data.total_loading_size > 0:
-                        trips_str = f"{vehicle_data.total_trips}/{vehicle_data.total_loading_size:.0f}m³"
+                        trips_str = f"{vehicle_data.total_trips}({vehicle_data.total_loading_size:.0f}m³)"
                     else:
                         trips_str = str(vehicle_data.total_trips)
 
                     # Format fuel column
                     if vehicle_data.total_fuel_liters > 0:
-                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L/{vehicle_data.total_fuel_cost:.0f}$"
+                        fuel_str = f"{vehicle_data.total_fuel_liters:.0f}L({vehicle_data.total_fuel_cost:.0f}$)"
                     else:
                         fuel_str = "—"
 
