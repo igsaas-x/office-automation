@@ -276,8 +276,7 @@ class SetupHandler:
         await query.answer()
 
         await query.edit_message_text(
-            "🚗 បញ្ចូលឡាន\n\n"
-            "សូមបញ្ចូលស្លាកលេខឡាន (ស្លាកលេខឡាន):\n"
+            "សូមបញ្ចូលស្លាកលេខឡាន:\n"
             "ឧទាហរណ៍: PP-1234 ឬ 2A-5678"
         )
 
