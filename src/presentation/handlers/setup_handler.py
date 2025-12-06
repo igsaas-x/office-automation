@@ -72,31 +72,31 @@ class SetupHandler:
         context.user_data['setup_group_id'] = chat.id
 
         keyboard = [
-            [InlineKeyboardButton("🚗 រៀបចំយានជំនិះ", callback_data="setup_vehicle")],
-            [InlineKeyboardButton("📋 បញ្ជីយានជំនិះ", callback_data="list_vehicles")],
+            [InlineKeyboardButton("🚗 បញ្ចូលឡាន", callback_data="setup_vehicle")],
+            [InlineKeyboardButton("📋 បញ្ជីឡាន", callback_data="list_vehicles")],
         ]
 
         # Only show driver options if driver functionality is enabled
         if self.register_driver_use_case:
             keyboard.extend([
-                [InlineKeyboardButton("👤 រៀបចំអ្នកបើកបរ", callback_data="setup_driver")],
+                [InlineKeyboardButton("👤 បញ្ចូលអ្នកបើកបរ", callback_data="setup_driver")],
                 [InlineKeyboardButton("📋 បញ្ជីអ្នកបើកបរ", callback_data="list_drivers")],
             ])
 
         keyboard.append([InlineKeyboardButton("❌ បោះបង់", callback_data="cancel_setup")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = "⚙️ ម៉ឺនុយរៀបចំ\n\n"
+        message_text = "⚙️ ម៉ឺនុយបញ្ចូល\n\n"
         if self.register_driver_use_case:
             message_text += (
-                "សូមជ្រើសរើសអ្វីដែលត្រូវរៀបចំ:\n\n"
-                "រៀបចំយានជំនិះជាមុនសិន បន្ទាប់មកអ្នកបើកបរ។\n"
+                "សូមជ្រើសរើសអ្វីដែលត្រូវបញ្ចូល:\n\n"
+                "បញ្ចូលឡានជាមុនសិន បន្ទាប់មកអ្នកបើកបរ។\n"
                 "អ្នកក៏អាចមើលបញ្ជី ឬលុបធាតុដែលមានស្រាប់បាន។"
             )
         else:
             message_text += (
-                "សូមជ្រើសរើសអ្វីដែលត្រូវរៀបចំ:\n\n"
-                "អ្នកអាចរៀបចំយានជំនិះ និងគ្រប់គ្រងក្រុមយានជំនិះរបស់អ្នក។"
+                "សូមជ្រើសរើសអ្វីដែលត្រូវបញ្ចូល:\n\n"
+                "អ្នកអាចបញ្ចូលឡាន និងគ្រប់គ្រងក្រុមឡានរបស់អ្នក។"
             )
 
         if update.callback_query:
@@ -128,11 +128,11 @@ class SetupHandler:
         session.close()
 
         type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
-        lines = ["🚗 យានជំនិះ", ""]
+        lines = ["🚗 ឡាន", ""]
         keyboard = []
 
         if not vehicles:
-            lines.append("រកមិនឃើញយានជំនិះទេ។\n\nប្រើរៀបចំយានជំនិះដើម្បីបន្ថែមមួយ។")
+            lines.append("រកមិនឃើញឡានទេ។\n\nប្រើបញ្ចូលឡានដើម្បីបន្ថែមមួយ។")
         else:
             for idx, vehicle in enumerate(vehicles, 1):
                 emoji = type_emoji.get(vehicle.vehicle_type, "🚗")
@@ -144,7 +144,7 @@ class SetupHandler:
                     )
                 ])
 
-        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅរៀបចំ", callback_data="back_to_setup")])
+        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅបញ្ចូល", callback_data="back_to_setup")])
 
         await query.edit_message_text(
             "\n".join(lines),
@@ -183,7 +183,7 @@ class SetupHandler:
         keyboard = []
 
         if not drivers:
-            lines.append("រកមិនឃើញអ្នកបើកបរទេ។\n\nប្រើរៀបចំអ្នកបើកបរដើម្បីបន្ថែមមួយ។")
+            lines.append("រកមិនឃើញអ្នកបើកបរទេ។\n\nប្រើបញ្ចូលអ្នកបើកបរដើម្បីបន្ថែមមួយ។")
         else:
             for idx, driver in enumerate(drivers, 1):
                 vehicle_label = ""
@@ -197,7 +197,7 @@ class SetupHandler:
                     )
                 ])
 
-        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅរៀបចំ", callback_data="back_to_setup")])
+        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅបញ្ចូល", callback_data="back_to_setup")])
 
         await query.edit_message_text(
             "\n".join(lines),
@@ -276,7 +276,7 @@ class SetupHandler:
         await query.answer()
 
         await query.edit_message_text(
-            "🚗 រៀបចំយានជំនិះ\n\n"
+            "🚗 បញ្ចូលឡាន\n\n"
             "សូមបញ្ចូលស្លាកលេខឡាន (ស្លាកលេខឡាន):\n"
             "ឧទាហរណ៍: PP-1234 ឬ 2A-5678"
         )
@@ -296,8 +296,8 @@ class SetupHandler:
 
         await update.message.reply_text(
             f"ស្លាកលេខឡាន: {license_plate}\n\n"
-            "សូមបញ្ចូលឈ្មោះអ្នកបើកបរសម្រាប់យានជំនិះនេះ:\n\n"
-            "ឬចុចរំលង ប្រសិនបើយានជំនិះនេះមិនមានអ្នកបើកបរកំណត់។",
+            "សូមបញ្ចូលឈ្មោះអ្នកបើកបរសម្រាប់ឡាននេះ:\n\n"
+            "ឬចុចរំលង ប្រសិនបើឡាននេះមិនមានអ្នកបើកបរកំណត់។",
             reply_markup=reply_markup
         )
 
@@ -346,7 +346,7 @@ class SetupHandler:
 
             # Show success message
             success_msg = (
-                f"✅ យានជំនិះត្រូវបានចុះឈ្មោះដោយជោគជ័យ!\n\n"
+                f"✅ ឡានត្រូវបានចុះឈ្មោះដោយជោគជ័យ!\n\n"
                 f"ស្លាកលេខឡាន: {response.license_plate}\n"
             )
             if driver_name:
@@ -382,7 +382,7 @@ class SetupHandler:
         await query.answer()
 
         await query.edit_message_text(
-            "👤 រៀបចំអ្នកបើកបរ\n\n"
+            "👤 បញ្ចូលអ្នកបើកបរ\n\n"
             "សូមបញ្ចូលឈ្មោះអ្នកបើកបរ:"
         )
 
@@ -454,8 +454,8 @@ class SetupHandler:
 
         if not vehicles:
             await update.message.reply_text(
-                "⚠️ រកមិនឃើញយានជំនិះទេ!\n\n"
-                "សូមរៀបចំយានជំនិះជាមុនសិនដោយប្រើ /setup → រៀបចំយានជំនិះ"
+                "⚠️ រកមិនឃើញឡានទេ!\n\n"
+                "សូមបញ្ចូលឡានជាមុនសិនដោយប្រើ /setup → បញ្ចូលឡាន"
             )
             return ConversationHandler.END
 
@@ -477,7 +477,7 @@ class SetupHandler:
         await update.message.reply_text(
             f"ឈ្មោះ: {context.user_data['driver_name']}\n"
             f"ទូរសព្ទ: {driver_phone}\n\n"
-            "កំណត់ទៅយានជំនិះ:",
+            "កំណត់ទៅឡាន:",
             reply_markup=reply_markup
         )
 
@@ -551,5 +551,5 @@ class SetupHandler:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel the conversation"""
-        await update.message.reply_text("ការរៀបចំត្រូវបានបោះបង់។")
+        await update.message.reply_text("ការបញ្ចូលត្រូវបានបោះបង់។")
         return ConversationHandler.END
