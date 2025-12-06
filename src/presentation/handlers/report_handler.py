@@ -177,8 +177,8 @@ class ReportHandler:
                 # Create table
                 table_lines = []
                 # table_lines.append("យានជំនិះ  |   ដំណើរ   | សាំង(L/$)")
-                table_lines.append("ឡាន    |  ចំនួនដឹក  |  ប្រេង(L/$)")
-                table_lines.append("----------------------------")
+                table_lines.append("    ឡាន    |  ចំនួនដឹក  |  ប្រេង(L/$)")
+                table_lines.append("--------------------------------")
 
                 # Sort by total trips descending
                 sorted_vehicles = sorted(report.vehicles, key=lambda v: v.total_trips, reverse=True)
