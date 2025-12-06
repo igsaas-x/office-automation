@@ -53,7 +53,7 @@ class MenuHandler:
         """Show report submenu"""
         keyboard = [
             [InlineKeyboardButton("📅 របាយការណ៍ប្រចាំថ្ងៃ", callback_data="report_daily")],
-            # [InlineKeyboardButton("📆 របាយការណ៍ប្រចាំខែ", callback_data="report_monthly")],
+            [InlineKeyboardButton("📆 របាយការណ៍ប្រចាំខែ", callback_data="report_monthly")],
             # [InlineKeyboardButton("📈 ការអនុវត្តរបស់យានជំនិះ", callback_data="report_vehicle_performance")],
             [InlineKeyboardButton("🔙 ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")]
         ]
