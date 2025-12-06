@@ -72,31 +72,31 @@ class SetupHandler:
         context.user_data['setup_group_id'] = chat.id
 
         keyboard = [
-            [InlineKeyboardButton("🚗 Setup Vehicle", callback_data="setup_vehicle")],
-            [InlineKeyboardButton("📋 List Vehicles", callback_data="list_vehicles")],
+            [InlineKeyboardButton("🚗 រៀបចំយានជំនិះ", callback_data="setup_vehicle")],
+            [InlineKeyboardButton("📋 បញ្ជីយានជំនិះ", callback_data="list_vehicles")],
         ]
 
         # Only show driver options if driver functionality is enabled
         if self.register_driver_use_case:
             keyboard.extend([
-                [InlineKeyboardButton("👤 Setup Driver", callback_data="setup_driver")],
-                [InlineKeyboardButton("📋 List Drivers", callback_data="list_drivers")],
+                [InlineKeyboardButton("👤 រៀបចំអ្នកបើកបរ", callback_data="setup_driver")],
+                [InlineKeyboardButton("📋 បញ្ជីអ្នកបើកបរ", callback_data="list_drivers")],
             ])
 
-        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_setup")])
+        keyboard.append([InlineKeyboardButton("❌ បោះបង់", callback_data="cancel_setup")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = "⚙️ Setup Menu\n\n"
+        message_text = "⚙️ ម៉ឺនុយរៀបចំ\n\n"
         if self.register_driver_use_case:
             message_text += (
-                "Choose what to setup:\n\n"
-                "Set up vehicles first, then drivers.\n"
-                "You can also list or delete existing entries."
+                "សូមជ្រើសរើសអ្វីដែលត្រូវរៀបចំ:\n\n"
+                "រៀបចំយានជំនិះជាមុនសិន បន្ទាប់មកអ្នកបើកបរ។\n"
+                "អ្នកក៏អាចមើលបញ្ជី ឬលុបធាតុដែលមានស្រាប់បាន។"
             )
         else:
             message_text += (
-                "Choose what to setup:\n\n"
-                "You can setup vehicles and manage your fleet."
+                "សូមជ្រើសរើសអ្វីដែលត្រូវរៀបចំ:\n\n"
+                "អ្នកអាចរៀបចំយានជំនិះ និងគ្រប់គ្រងក្រុមយានជំនិះរបស់អ្នក។"
             )
 
         if update.callback_query:
@@ -120,7 +120,7 @@ class SetupHandler:
 
         group, session = self._get_group(context)
         if not group:
-            await query.edit_message_text("❌ Error: Group not found. Please try /setup again.")
+            await query.edit_message_text("❌ កំហុស: រកមិនឃើញក្រុម។ សូមព្យាយាម /setup ម្តងទៀត។")
             session.close()
             return ConversationHandler.END
 
@@ -128,23 +128,23 @@ class SetupHandler:
         session.close()
 
         type_emoji = {"TRUCK": "🚚", "VAN": "🚐", "MOTORCYCLE": "🏍️", "CAR": "🚗"}
-        lines = ["🚗 Vehicles", ""]
+        lines = ["🚗 យានជំនិះ", ""]
         keyboard = []
 
         if not vehicles:
-            lines.append("No vehicles found.\n\nUse Setup Vehicle to add one.")
+            lines.append("រកមិនឃើញយានជំនិះទេ។\n\nប្រើរៀបចំយានជំនិះដើម្បីបន្ថែមមួយ។")
         else:
             for idx, vehicle in enumerate(vehicles, 1):
                 emoji = type_emoji.get(vehicle.vehicle_type, "🚗")
                 lines.append(f"{idx}. {emoji} {vehicle.license_plate}")
                 keyboard.append([
                     InlineKeyboardButton(
-                        f"🗑️ Delete {vehicle.license_plate}",
+                        f"🗑️ លុប {vehicle.license_plate}",
                         callback_data=f"delete_vehicle_{vehicle.id}"
                     )
                 ])
 
-        keyboard.append([InlineKeyboardButton("⬅️ Back to Setup", callback_data="back_to_setup")])
+        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅរៀបចំ", callback_data="back_to_setup")])
 
         await query.edit_message_text(
             "\n".join(lines),
@@ -158,7 +158,7 @@ class SetupHandler:
         # Driver functionality disabled
         if not self.driver_repository:
             query = update.callback_query
-            await query.answer("Driver functionality is not available")
+            await query.answer("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return SETUP_MENU
 
         query = update.callback_query
@@ -170,7 +170,7 @@ class SetupHandler:
 
         group, session = self._get_group(context)
         if not group:
-            await query.edit_message_text("❌ Error: Group not found. Please try /setup again.")
+            await query.edit_message_text("❌ កំហុស: រកមិនឃើញក្រុម។ សូមព្យាយាម /setup ម្តងទៀត។")
             session.close()
             return ConversationHandler.END
 
@@ -179,11 +179,11 @@ class SetupHandler:
         vehicle_map = {v.id: v for v in vehicles}
         session.close()
 
-        lines = ["👤 Drivers", ""]
+        lines = ["👤 អ្នកបើកបរ", ""]
         keyboard = []
 
         if not drivers:
-            lines.append("No drivers found.\n\nUse Setup Driver to add one.")
+            lines.append("រកមិនឃើញអ្នកបើកបរទេ។\n\nប្រើរៀបចំអ្នកបើកបរដើម្បីបន្ថែមមួយ។")
         else:
             for idx, driver in enumerate(drivers, 1):
                 vehicle_label = ""
@@ -192,12 +192,12 @@ class SetupHandler:
                 lines.append(f"{idx}. 👤 {driver.name} ({driver.phone}){vehicle_label}")
                 keyboard.append([
                     InlineKeyboardButton(
-                        f"🗑️ Delete {driver.name}",
+                        f"🗑️ លុប {driver.name}",
                         callback_data=f"delete_driver_{driver.id}"
                     )
                 ])
 
-        keyboard.append([InlineKeyboardButton("⬅️ Back to Setup", callback_data="back_to_setup")])
+        keyboard.append([InlineKeyboardButton("⬅️ ត្រឡប់ទៅរៀបចំ", callback_data="back_to_setup")])
 
         await query.edit_message_text(
             "\n".join(lines),
@@ -216,13 +216,13 @@ class SetupHandler:
 
         group, session = self._get_group(context)
         if not group:
-            await query.answer("Group not found", show_alert=True)
+            await query.answer("រកមិនឃើញក្រុម", show_alert=True)
             session.close()
             return ConversationHandler.END
 
         try:
             response = self.delete_vehicle_use_case.execute(group.id, vehicle_id)
-            await query.answer(f"Deleted {response.license_plate}")
+            await query.answer(f"បានលុប {response.license_plate}")
         except ValueError as e:
             await query.answer(str(e), show_alert=True)
             session.close()
@@ -236,7 +236,7 @@ class SetupHandler:
         # Driver functionality disabled
         if not self.delete_driver_use_case:
             query = update.callback_query
-            await query.answer("Driver functionality is not available")
+            await query.answer("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return SETUP_MENU
 
         query = update.callback_query
@@ -247,13 +247,13 @@ class SetupHandler:
 
         group, session = self._get_group(context)
         if not group:
-            await query.answer("Group not found", show_alert=True)
+            await query.answer("រកមិនឃើញក្រុម", show_alert=True)
             session.close()
             return ConversationHandler.END
 
         try:
             response = self.delete_driver_use_case.execute(group.id, driver_id)
-            await query.answer(f"Deleted {response.name}")
+            await query.answer(f"បានលុប {response.name}")
         except ValueError as e:
             await query.answer(str(e), show_alert=True)
             session.close()
@@ -276,9 +276,9 @@ class SetupHandler:
         await query.answer()
 
         await query.edit_message_text(
-            "🚗 Vehicle Setup\n\n"
-            "Please enter the vehicle license plate (ស្លាកលេខឡាន):\n"
-            "Example: PP-1234 or 2A-5678"
+            "🚗 រៀបចំយានជំនិះ\n\n"
+            "សូមបញ្ចូលស្លាកលេខឡាន (ស្លាកលេខឡាន):\n"
+            "ឧទាហរណ៍: PP-1234 ឬ 2A-5678"
         )
 
         return SETUP_VEHICLE_PLATE
@@ -291,13 +291,13 @@ class SetupHandler:
         context.user_data['vehicle_license_plate'] = license_plate
 
         # Ask for driver name with skip option
-        keyboard = [[InlineKeyboardButton("⏭️ Skip (No Driver)", callback_data="vehicle_skip_driver")]]
+        keyboard = [[InlineKeyboardButton("⏭️ រំលង (គ្មានអ្នកបើកបរ)", callback_data="vehicle_skip_driver")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            f"License Plate: {license_plate}\n\n"
-            "Please enter the driver's name for this vehicle:\n\n"
-            "Or press Skip if this vehicle doesn't have an assigned driver.",
+            f"ស្លាកលេខឡាន: {license_plate}\n\n"
+            "សូមបញ្ចូលឈ្មោះអ្នកបើកបរសម្រាប់យានជំនិះនេះ:\n\n"
+            "ឬចុចរំលង ប្រសិនបើយានជំនិះនេះមិនមានអ្នកបើកបរកំណត់។",
             reply_markup=reply_markup
         )
 
@@ -326,7 +326,7 @@ class SetupHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['setup_group_id']))
 
         if not group:
-            error_msg = "❌ Error: Group not found. Please try again."
+            error_msg = "❌ កំហុស: រកមិនឃើញក្រុម។ សូមព្យាយាមម្តងទៀត។"
             if update.callback_query:
                 await update.callback_query.edit_message_text(error_msg)
             else:
@@ -346,11 +346,11 @@ class SetupHandler:
 
             # Show success message
             success_msg = (
-                f"✅ Vehicle registered successfully!\n\n"
-                f"License Plate: {response.license_plate}\n"
+                f"✅ យានជំនិះត្រូវបានចុះឈ្មោះដោយជោគជ័យ!\n\n"
+                f"ស្លាកលេខឡាន: {response.license_plate}\n"
             )
             if driver_name:
-                success_msg += f"Driver: {driver_name}\n"
+                success_msg += f"អ្នកបើកបរ: {driver_name}\n"
 
             if update.callback_query:
                 await update.callback_query.edit_message_text(success_msg)
@@ -358,7 +358,7 @@ class SetupHandler:
                 await update.message.reply_text(success_msg)
 
         except ValueError as e:
-            error_msg = f"❌ Error: {str(e)}"
+            error_msg = f"❌ កំហុស: {str(e)}"
             if update.callback_query:
                 await update.callback_query.edit_message_text(error_msg)
             else:
@@ -375,15 +375,15 @@ class SetupHandler:
         # Driver functionality disabled
         if not self.register_driver_use_case:
             query = update.callback_query
-            await query.answer("Driver functionality is not available")
+            await query.answer("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return SETUP_MENU
 
         query = update.callback_query
         await query.answer()
 
         await query.edit_message_text(
-            "👤 Driver Setup\n\n"
-            "Please enter the driver's name:"
+            "👤 រៀបចំអ្នកបើកបរ\n\n"
+            "សូមបញ្ចូលឈ្មោះអ្នកបើកបរ:"
         )
 
         return SETUP_DRIVER_NAME
@@ -392,16 +392,16 @@ class SetupHandler:
         """Receive driver name"""
         # Driver functionality disabled
         if not self.register_driver_use_case:
-            await update.message.reply_text("Driver functionality is not available")
+            await update.message.reply_text("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return ConversationHandler.END
 
         driver_name = update.message.text.strip()
         context.user_data['driver_name'] = driver_name
 
         await update.message.reply_text(
-            f"Name: {driver_name}\n\n"
-            "Please enter the driver's role:\n"
-            "Example: Driver, Manager, Supervisor"
+            f"ឈ្មោះ: {driver_name}\n\n"
+            "សូមបញ្ចូលតួនាទីអ្នកបើកបរ:\n"
+            "ឧទាហរណ៍: អ្នកបើកបរ, អ្នកគ្រប់គ្រង, អ្នកត្រួតពិនិត្យ"
         )
 
         return SETUP_DRIVER_ROLE
@@ -410,17 +410,17 @@ class SetupHandler:
         """Receive driver role"""
         # Driver functionality disabled
         if not self.register_driver_use_case:
-            await update.message.reply_text("Driver functionality is not available")
+            await update.message.reply_text("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return ConversationHandler.END
 
         driver_role = update.message.text.strip()
         context.user_data['driver_role'] = driver_role
 
         await update.message.reply_text(
-            f"Name: {context.user_data['driver_name']}\n"
-            f"Role: {driver_role}\n\n"
-            "Please enter the driver's phone number:\n"
-            "Example: 012345678"
+            f"ឈ្មោះ: {context.user_data['driver_name']}\n"
+            f"តួនាទី: {driver_role}\n\n"
+            "សូមបញ្ចូលលេខទូរសព្ទអ្នកបើកបរ:\n"
+            "ឧទាហរណ៍: 012345678"
         )
 
         return SETUP_DRIVER_PHONE
@@ -429,7 +429,7 @@ class SetupHandler:
         """Receive driver phone and show vehicle selection"""
         # Driver functionality disabled
         if not self.register_driver_use_case:
-            await update.message.reply_text("Driver functionality is not available")
+            await update.message.reply_text("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return ConversationHandler.END
 
         driver_phone = update.message.text.strip()
@@ -444,7 +444,7 @@ class SetupHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['setup_group_id']))
 
         if not group:
-            await update.message.reply_text("❌ Error: Group not found.")
+            await update.message.reply_text("❌ កំហុស: រកមិនឃើញក្រុម។")
             session.close()
             return ConversationHandler.END
 
@@ -454,8 +454,8 @@ class SetupHandler:
 
         if not vehicles:
             await update.message.reply_text(
-                "⚠️ No vehicles found!\n\n"
-                "Please setup a vehicle first using /setup → Setup Vehicle"
+                "⚠️ រកមិនឃើញយានជំនិះទេ!\n\n"
+                "សូមរៀបចំយានជំនិះជាមុនសិនដោយប្រើ /setup → រៀបចំយានជំនិះ"
             )
             return ConversationHandler.END
 
@@ -470,14 +470,14 @@ class SetupHandler:
                     callback_data=f"assign_vehicle_{vehicle.id}"
                 )
             ])
-        keyboard.append([InlineKeyboardButton("⏭️ Skip - Assign Later", callback_data="assign_vehicle_skip")])
+        keyboard.append([InlineKeyboardButton("⏭️ រំលង - កំណត់ពេលក្រោយ", callback_data="assign_vehicle_skip")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            f"Name: {context.user_data['driver_name']}\n"
-            f"Phone: {driver_phone}\n\n"
-            "Assign to vehicle:",
+            f"ឈ្មោះ: {context.user_data['driver_name']}\n"
+            f"ទូរសព្ទ: {driver_phone}\n\n"
+            "កំណត់ទៅយានជំនិះ:",
             reply_markup=reply_markup
         )
 
@@ -488,7 +488,7 @@ class SetupHandler:
         # Driver functionality disabled
         if not self.register_driver_use_case:
             query = update.callback_query
-            await query.answer("Driver functionality is not available")
+            await query.answer("មុខងារអ្នកបើកបរមិនអាចប្រើបានទេ")
             return ConversationHandler.END
 
         query = update.callback_query
@@ -511,7 +511,7 @@ class SetupHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['setup_group_id']))
 
         if not group:
-            await query.edit_message_text("❌ Error: Group not found.")
+            await query.edit_message_text("❌ កំហុស: រកមិនឃើញក្រុម។")
             session.close()
             return ConversationHandler.END
 
@@ -531,19 +531,19 @@ class SetupHandler:
             if response.assigned_vehicle_id:
                 vehicle = self.vehicle_repository.find_by_id(response.assigned_vehicle_id)
                 if vehicle:
-                    vehicle_info = f"\nAssigned to: {vehicle.license_plate}"
+                    vehicle_info = f"\nកំណត់ទៅ: {vehicle.license_plate}"
 
             await query.edit_message_text(
-                f"✅ Driver registered successfully!\n\n"
-                f"Name: {response.name}\n"
-                f"Phone: {response.phone}\n"
-                f"Role: {response.role}"
+                f"✅ អ្នកបើកបរត្រូវបានចុះឈ្មោះដោយជោគជ័យ!\n\n"
+                f"ឈ្មោះ: {response.name}\n"
+                f"ទូរសព្ទ: {response.phone}\n"
+                f"តួនាទី: {response.role}"
                 f"{vehicle_info}\n\n"
-                "The driver can now record trips and fuel."
+                "អ្នកបើកបរឥឡូវអាចកត់ត្រាដំណើរ និងសាំងបាន។"
             )
 
         except ValueError as e:
-            await query.edit_message_text(f"❌ Error: {str(e)}")
+            await query.edit_message_text(f"❌ កំហុស: {str(e)}")
         finally:
             session.close()
 
@@ -551,5 +551,5 @@ class SetupHandler:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel the conversation"""
-        await update.message.reply_text("Setup cancelled.")
+        await update.message.reply_text("ការរៀបចំត្រូវបានបោះបង់។")
         return ConversationHandler.END

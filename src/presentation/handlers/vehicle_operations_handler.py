@@ -48,7 +48,7 @@ class VehicleOperationsHandler:
         group = group_repo.find_by_chat_id(str(chat.id))
 
         if not group:
-            message = "❌ Error: Group not found. Please register first."
+            message = "❌ កំហុស: រកមិនឃើញក្រុម។ សូមចុះឈ្មោះជាមុនសិន។"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -62,8 +62,8 @@ class VehicleOperationsHandler:
 
         if not vehicles:
             message = (
-                "⚠️ No vehicles found!\n\n"
-                "Please setup a vehicle first using /setup"
+                "⚠️ រកមិនឃើញយានជំនិះទេ!\n\n"
+                "សូមរៀបចំយានជំនិះជាមុនសិនដោយប្រើ /setup"
             )
             if query:
                 await query.edit_message_text(message)
@@ -86,10 +86,10 @@ class VehicleOperationsHandler:
                 InlineKeyboardButton(label, callback_data=f"trip_vehicle_{vehicle.id}")
             ])
 
-        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="menu_daily_operation")])
+        keyboard.append([InlineKeyboardButton("🔙 ត្រឡប់", callback_data="menu_daily_operation")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = "🚚 Record Trip\n\nSelect vehicle:"
+        message_text = "🚚 កត់ត្រាដំណើរ\n\nជ្រើសរើសយានជំនិះ:"
 
         if query:
             await query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -109,15 +109,15 @@ class VehicleOperationsHandler:
         # Get vehicle info
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
-            await query.edit_message_text("❌ Error: Vehicle not found.")
+            await query.edit_message_text("❌ កំហុស: រកមិនឃើញយានជំនិះ។")
             return ConversationHandler.END
 
         context.user_data['trip_vehicle_plate'] = vehicle.license_plate
 
         await query.edit_message_text(
-            f"🚚 Trip Record for {vehicle.license_plate}\n\n"
-            "Please enter the total number of trips for today:\n"
-            "Example: 5"
+            f"🚚 កត់ត្រាដំណើរសម្រាប់ {vehicle.license_plate}\n\n"
+            "សូមបញ្ចូលចំនួនដំណើរសរុបសម្រាប់ថ្ងៃនេះ:\n"
+            "ឧទាហរណ៍: 5"
         )
 
         return ENTER_TRIP_COUNT
@@ -127,23 +127,23 @@ class VehicleOperationsHandler:
         try:
             trip_count = int(update.message.text.strip())
             if trip_count <= 0:
-                raise ValueError("Trip count must be greater than 0")
+                raise ValueError("ចំនួនដំណើរត្រូវតែធំជាង 0")
 
             context.user_data['trip_count'] = trip_count
             vehicle_plate = context.user_data.get('trip_vehicle_plate')
 
             await update.message.reply_text(
-                f"Trip count: {trip_count} trips\n\n"
-                "Please enter the total loading size for all trips in cubic meters (m³):\n"
-                "Example: 25 or 25.5"
+                f"ចំនួនដំណើរ: {trip_count} ដំណើរ\n\n"
+                "សូមបញ្ចូលទំហំផ្ទុកសរុបសម្រាប់ដំណើរទាំងអស់គិតជាម៉ែត្រគូប (m³):\n"
+                "ឧទាហរណ៍: 25 ឬ 25.5"
             )
 
             return ENTER_TOTAL_LOADING_SIZE
 
         except ValueError as e:
             await update.message.reply_text(
-                f"❌ Invalid input: {str(e)}\n\n"
-                "Please enter a valid number for trip count:"
+                f"❌ ព័ត៌មានមិនត្រឹមត្រូវ: {str(e)}\n\n"
+                "សូមបញ្ចូលលេខត្រឹមត្រូវសម្រាប់ចំនួនដំណើរ:"
             )
             return ENTER_TRIP_COUNT
 
@@ -152,14 +152,14 @@ class VehicleOperationsHandler:
         try:
             total_loading_size = float(update.message.text.strip())
             if total_loading_size <= 0:
-                raise ValueError("Total loading size must be greater than 0")
+                raise ValueError("ទំហំផ្ទុកសរុបត្រូវតែធំជាង 0")
 
             context.user_data['total_loading_size'] = total_loading_size
 
         except ValueError as e:
             await update.message.reply_text(
-                f"❌ Invalid input: {str(e)}\n\n"
-                "Please enter a valid number for total loading size (in cubic meters):"
+                f"❌ ព័ត៌មានមិនត្រឹមត្រូវ: {str(e)}\n\n"
+                "សូមបញ្ចូលលេខត្រឹមត្រូវសម្រាប់ទំហំផ្ទុកសរុប (គិតជាម៉ែត្រគូប):"
             )
             return ENTER_TOTAL_LOADING_SIZE
 
@@ -180,14 +180,14 @@ class VehicleOperationsHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['operation_group_id']))
 
         if not group:
-            await update.message.reply_text("❌ Error: Group not found.")
+            await update.message.reply_text("❌ កំហុស: រកមិនឃើញក្រុម។")
             session.close()
             return ConversationHandler.END
 
         # Get vehicle
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
-            await update.message.reply_text("❌ Error: Vehicle not found.")
+            await update.message.reply_text("❌ កំហុស: រកមិនឃើញយានជំនិះ។")
             session.close()
             return ConversationHandler.END
 
@@ -218,26 +218,26 @@ class VehicleOperationsHandler:
             last_trip_num = last_trip.trip_number
 
             message_parts = [
-                f"✅ {trip_count} trips recorded for {last_trip.vehicle_license_plate}\n",
-                f"Vehicle: {emoji} {last_trip.vehicle_license_plate}"
+                f"✅ {trip_count} ដំណើរត្រូវបានកត់ត្រាសម្រាប់ {last_trip.vehicle_license_plate}\n",
+                f"យានជំនិះ: {emoji} {last_trip.vehicle_license_plate}"
             ]
 
             if last_trip.driver_name:
-                message_parts.append(f"Driver: {last_trip.driver_name}")
+                message_parts.append(f"អ្នកបើកបរ: {last_trip.driver_name}")
 
             message_parts.extend([
-                f"Trip numbers: #{first_trip_num} - #{last_trip_num}",
-                f"Loading per trip: {loading_size_per_trip:.2f}m³",
-                f"Total loading: {total_loading_size}m³",
-                f"Date: {last_trip.date}",
-                f"Time: {format_time_ict(datetime.fromisoformat(last_trip.created_at))}\n",
-                f"Total trips today: {total_today}"
+                f"លេខដំណើរ: #{first_trip_num} - #{last_trip_num}",
+                f"ទំហំផ្ទុក/ដំណើរ: {loading_size_per_trip:.2f}m³",
+                f"ទំហំផ្ទុកសរុប: {total_loading_size}m³",
+                f"កាលបរិច្ឆេទ: {last_trip.date}",
+                f"ពេលវេលា: {format_time_ict(datetime.fromisoformat(last_trip.created_at))}\n",
+                f"ដំណើរសរុបថ្ងៃនេះ: {total_today}"
             ])
 
             await update.message.reply_text("\n".join(message_parts))
 
         except Exception as e:
-            await update.message.reply_text(f"❌ Error: {str(e)}")
+            await update.message.reply_text(f"❌ កំហុស: {str(e)}")
         finally:
             session.close()
 
@@ -263,7 +263,7 @@ class VehicleOperationsHandler:
         group = group_repo.find_by_chat_id(str(chat.id))
 
         if not group:
-            message = "❌ Error: Group not found."
+            message = "❌ កំហុស: រកមិនឃើញក្រុម។"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -276,7 +276,7 @@ class VehicleOperationsHandler:
         session.close()
 
         if not vehicles:
-            message = "⚠️ No vehicles found!\n\nPlease setup a vehicle first using /setup"
+            message = "⚠️ រកមិនឃើញយានជំនិះទេ!\n\nសូមរៀបចំយានជំនិះជាមុនសិនដោយប្រើ /setup"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -295,9 +295,9 @@ class VehicleOperationsHandler:
                 )
             ])
 
-        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="menu_daily_operation")])
+        keyboard.append([InlineKeyboardButton("🔙 ត្រឡប់", callback_data="menu_daily_operation")])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        message_text = "⛽ Record Fuel\n\nSelect vehicle:"
+        message_text = "⛽ កត់ត្រាសាំង\n\nជ្រើសរើសយានជំនិះ:"
 
         if query:
             await query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -317,15 +317,15 @@ class VehicleOperationsHandler:
         # Get vehicle info
         vehicle = self.vehicle_repository.find_by_id(vehicle_id)
         if not vehicle:
-            await query.edit_message_text("❌ Error: Vehicle not found.")
+            await query.edit_message_text("❌ កំហុស: រកមិនឃើញយានជំនិះ។")
             return ConversationHandler.END
 
         context.user_data['fuel_vehicle_plate'] = vehicle.license_plate
 
         await query.edit_message_text(
-            f"⛽ Fuel Record for {vehicle.license_plate}\n\n"
-            "Please enter the number of liters:\n"
-            "Example: 50 or 50.5"
+            f"⛽ កត់ត្រាសាំងសម្រាប់ {vehicle.license_plate}\n\n"
+            "សូមបញ្ចូលចំនួនលីត្រ:\n"
+            "ឧទាហរណ៍: 50 ឬ 50.5"
         )
 
         return ENTER_FUEL_LITERS
@@ -335,22 +335,22 @@ class VehicleOperationsHandler:
         try:
             liters = float(update.message.text.strip())
             if liters <= 0:
-                raise ValueError("Liters must be greater than 0")
+                raise ValueError("ចំនួនលីត្រត្រូវតែធំជាង 0")
 
             context.user_data['fuel_liters'] = liters
 
             await update.message.reply_text(
-                f"Liters: {liters}L\n\n"
-                "Please enter the cost (Dollar):\n"
-                "Example: 50 or 50.25"
+                f"លីត្រ: {liters}L\n\n"
+                "សូមបញ្ចូលថ្លៃ (ដុល្លារ):\n"
+                "ឧទាហរណ៍: 50 ឬ 50.25"
             )
 
             return ENTER_FUEL_COST
 
         except ValueError as e:
             await update.message.reply_text(
-                f"❌ Invalid input: {str(e)}\n\n"
-                "Please enter a valid number for liters:"
+                f"❌ ព័ត៌មានមិនត្រឹមត្រូវ: {str(e)}\n\n"
+                "សូមបញ្ចូលលេខត្រឹមត្រូវសម្រាប់ចំនួនលីត្រ:"
             )
             return ENTER_FUEL_LITERS
 
@@ -359,17 +359,17 @@ class VehicleOperationsHandler:
         try:
             cost = float(update.message.text.strip())
             if cost <= 0:
-                raise ValueError("Cost must be greater than 0")
+                raise ValueError("ថ្លៃត្រូវតែធំជាង 0")
 
             context.user_data['fuel_cost'] = cost
 
-            keyboard = [[InlineKeyboardButton("⏭️ Skip", callback_data="fuel_skip_photo")]]
+            keyboard = [[InlineKeyboardButton("⏭️ រំលង", callback_data="fuel_skip_photo")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                f"Cost: ${cost:,.2f}\n\n"
-                "Upload receipt photo (optional):\n"
-                "Send a photo or click Skip",
+                f"ថ្លៃ: ${cost:,.2f}\n\n"
+                "ផ្ទុកឡើងរូបថតបង្កាន់ដៃ (ស្រេចចិត្ត):\n"
+                "ផ្ញើរូបថត ឬចុចរំលង",
                 reply_markup=reply_markup
             )
 
@@ -377,8 +377,8 @@ class VehicleOperationsHandler:
 
         except ValueError as e:
             await update.message.reply_text(
-                f"❌ Invalid input: {str(e)}\n\n"
-                "Please enter a valid number for cost:"
+                f"❌ ព័ត៌មានមិនត្រឹមត្រូវ: {str(e)}\n\n"
+                "សូមបញ្ចូលលេខត្រឹមត្រូវសម្រាប់ថ្លៃ:"
             )
             return ENTER_FUEL_COST
 
@@ -413,7 +413,7 @@ class VehicleOperationsHandler:
         group = group_repo.find_by_chat_id(str(context.user_data['operation_group_id']))
 
         if not group:
-            await message.reply_text("❌ Error: Group not found.")
+            await message.reply_text("❌ កំហុស: រកមិនឃើញក្រុម។")
             session.close()
             return ConversationHandler.END
 
@@ -428,18 +428,18 @@ class VehicleOperationsHandler:
             )
             response = self.record_fuel_use_case.execute(request)
 
-            receipt_status = "✅ Uploaded" if receipt_url else "No receipt"
+            receipt_status = "✅ បានផ្ទុកឡើង" if receipt_url else "គ្មានបង្កាន់ដៃ"
 
             await message.reply_text(
-                f"⛽ Fuel recorded for {vehicle_plate}\n\n"
-                f"Date: {response.date}\n"
-                f"Liters: {response.liters}L\n"
-                f"Cost: ${response.cost:,.2f}\n"
-                f"Receipt: {receipt_status}"
+                f"⛽ សាំងត្រូវបានកត់ត្រាសម្រាប់ {vehicle_plate}\n\n"
+                f"កាលបរិច្ឆេទ: {response.date}\n"
+                f"លីត្រ: {response.liters}L\n"
+                f"ថ្លៃ: ${response.cost:,.2f}\n"
+                f"បង្កាន់ដៃ: {receipt_status}"
             )
 
         except Exception as e:
-            await message.reply_text(f"❌ Error: {str(e)}")
+            await message.reply_text(f"❌ កំហុស: {str(e)}")
         finally:
             session.close()
 
@@ -447,5 +447,5 @@ class VehicleOperationsHandler:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel operation"""
-        await update.message.reply_text("Operation cancelled.")
+        await update.message.reply_text("ប្រតិបត្តិការត្រូវបានបោះបង់។")
         return ConversationHandler.END

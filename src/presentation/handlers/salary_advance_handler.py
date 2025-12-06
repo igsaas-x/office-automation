@@ -21,10 +21,10 @@ class SalaryAdvanceHandler:
         message = update.effective_message
 
         if user.id not in settings.ADMIN_IDS:
-            await message.reply_text("You don't have permission to use this feature.")
+            await message.reply_text("អ្នកមិនមានសិទ្ធិប្រើប្រាស់មុខងារនេះទេ។")
             return ConversationHandler.END
 
-        await message.reply_text("Please enter the employee's name:")
+        await message.reply_text("សូមបញ្ចូលឈ្មោះបុគ្គលិក:")
         return WAITING_EMPLOYEE_NAME_ADV
 
     async def get_amount(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,7 +32,7 @@ class SalaryAdvanceHandler:
         employee_name = update.message.text.strip()
         context.user_data['advance_employee_name'] = employee_name
 
-        await update.message.reply_text(f"Enter the advance amount for {employee_name}:")
+        await update.message.reply_text(f"បញ្ចូលចំនួនទឹកប្រាក់បុរេសម្រាប់ {employee_name}:")
         return WAITING_ADVANCE_AMOUNT
 
     async def get_note(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -41,10 +41,10 @@ class SalaryAdvanceHandler:
             amount = float(update.message.text.strip())
             context.user_data['advance_amount'] = amount
 
-            await update.message.reply_text("Enter a note (optional, or type 'skip'):")
+            await update.message.reply_text("បញ្ចូលកំណត់សម្គាល់ (ស្រេចចិត្ត ឬវាយ 'skip'):")
             return WAITING_ADVANCE_NOTE
         except ValueError:
-            await update.message.reply_text("Invalid amount. Please enter a number:")
+            await update.message.reply_text("ចំនួនទឹកប្រាក់មិនត្រឹមត្រូវ។ សូមបញ្ចូលលេខ:")
             return WAITING_ADVANCE_AMOUNT
 
     async def save(self, update: Update, context: ContextTypes.DEFAULT_TYPE, show_menu_callback):
@@ -66,13 +66,13 @@ class SalaryAdvanceHandler:
 
             await update.message.reply_text(
                 f"✅ {response.message}\n"
-                f"Employee: {response.employee_name}\n"
-                f"Amount: {response.amount}\n"
-                f"Note: {note or 'N/A'}\n"
-                f"Time: {response.timestamp}"
+                f"បុគ្គលិក: {response.employee_name}\n"
+                f"ចំនួនទឹកប្រាក់: {response.amount}\n"
+                f"កំណត់សម្គាល់: {note or 'គ្មាន'}\n"
+                f"ពេលវេលា: {response.timestamp}"
             )
         except ValueError as e:
-            await update.message.reply_text(f"Error: {str(e)}")
+            await update.message.reply_text(f"កំហុស: {str(e)}")
 
         # Capture any stored employee name before clearing the context
         employee_name = context.user_data.get('employee_name')

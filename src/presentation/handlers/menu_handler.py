@@ -17,16 +17,16 @@ class MenuHandler:
 
         # Check-in button (with feature flag)
         if self.check_in_enabled:
-            keyboard.append([InlineKeyboardButton("📍 Check In", callback_data="checkin")])
+            keyboard.append([InlineKeyboardButton("📍 ចុះឈ្មោះ", callback_data="checkin")])
 
         # Main menu buttons with submenus
-        keyboard.append([InlineKeyboardButton("📋 Daily Operation", callback_data="menu_daily_operation")])
-        keyboard.append([InlineKeyboardButton("📊 Report", callback_data="menu_report")])
-        keyboard.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_menu")])
+        keyboard.append([InlineKeyboardButton("📋 ប្រតិបត្តិការប្រចាំថ្ងៃ", callback_data="menu_daily_operation")])
+        keyboard.append([InlineKeyboardButton("📊 របាយការណ៍", callback_data="menu_report")])
+        keyboard.append([InlineKeyboardButton("❌ បោះបង់", callback_data="cancel_menu")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = "🏠 Main Menu\n\nChoose an option:"
+        message_text = "🏠 ម៉ឺនុយមេ\n\nសូមជ្រើសរើសជម្រើសមួយ:"
 
         if update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -36,13 +36,13 @@ class MenuHandler:
     async def show_daily_operation_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show daily operation submenu"""
         keyboard = [
-            [InlineKeyboardButton("⛽ Add Fuel Record", callback_data="add_fuel")],
-            [InlineKeyboardButton("🚚 Add Trip Record", callback_data="add_trip")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton("⛽ បន្ថែមកំណត់ត្រាសាំង", callback_data="add_fuel")],
+            [InlineKeyboardButton("🚚 បន្ថែមកំណត់ត្រាដំណើរ", callback_data="add_trip")],
+            [InlineKeyboardButton("🔙 ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")]
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        message_text = "📋 Daily Operation\n\nChoose an option:"
+        message_text = "📋 ប្រតិបត្តិការប្រចាំថ្ងៃ\n\nសូមជ្រើសរើសជម្រើសមួយ:"
 
         if update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -52,14 +52,14 @@ class MenuHandler:
     async def show_report_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show report submenu"""
         keyboard = [
-            [InlineKeyboardButton("📅 Daily Report", callback_data="report_daily")],
-            [InlineKeyboardButton("📆 Monthly Report", callback_data="report_monthly")],
-            [InlineKeyboardButton("📈 Vehicle Performance", callback_data="report_vehicle_performance")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton("📅 របាយការណ៍ប្រចាំថ្ងៃ", callback_data="report_daily")],
+            [InlineKeyboardButton("📆 របាយការណ៍ប្រចាំខែ", callback_data="report_monthly")],
+            [InlineKeyboardButton("📈 ការអនុវត្តរបស់យានជំនិះ", callback_data="report_vehicle_performance")],
+            [InlineKeyboardButton("🔙 ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")]
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
-        message_text = "📊 Report\n\nChoose an option:"
+        message_text = "📊 របាយការណ៍\n\nសូមជ្រើសរើសជម្រើសមួយ:"
 
         if update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)

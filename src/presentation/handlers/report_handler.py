@@ -47,7 +47,7 @@ class ReportHandler:
         group = group_repo.find_by_chat_id(str(chat.id))
 
         if not group:
-            message = "❌ Error: Group not found. Please register first."
+            message = "❌ កំហុស: រកមិនឃើញក្រុម។ សូមចុះឈ្មោះជាមុនសិន។"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -62,21 +62,21 @@ class ReportHandler:
 
             # Format report message
             message_parts = [
-                f"📅 Daily Report - {escape(report.date)}",
+                f"📅 របាយការណ៍ប្រចាំថ្ងៃ - {escape(report.date)}",
                 "",
-                "📊 Summary:",
-                f"• Total Trips: {report.total_trips}",
-                f"• Total Fuel: {report.total_fuel_liters}L",
-                f"• Total Cost: ${report.total_fuel_cost:,.2f}",
+                "📊 សង្ខេប:",
+                f"• ដំណើរសរុប: {report.total_trips}",
+                f"• សាំងសរុប: {report.total_fuel_liters}L",
+                f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}",
                 ""
             ]
 
             if not report.vehicles:
-                message_parts.append("⚠️ No activity recorded for today.")
+                message_parts.append("⚠️ គ្មានសកម្មភាពកត់ត្រាសម្រាប់ថ្ងៃនេះទេ។")
             else:
                 # Create consolidated table
                 table_lines = []
-                table_lines.append("Vehicle   |   Trips   | Fuel(L/$)")
+                table_lines.append("យានជំនិះ  |   ដំណើរ   | សាំង(L/$)")
                 table_lines.append("-------------------------------")
 
                 for vehicle_data in report.vehicles:
@@ -111,7 +111,7 @@ class ReportHandler:
                 await update.message.reply_text(message_text, parse_mode=ParseMode.HTML)
 
         except Exception as e:
-            error_message = f"❌ Error generating report: {str(e)}"
+            error_message = f"❌ កំហុសក្នុងការបង្កើតរបាយការណ៍: {str(e)}"
             if query:
                 await query.edit_message_text(error_message)
             else:
@@ -138,7 +138,7 @@ class ReportHandler:
         group = group_repo.find_by_chat_id(str(chat.id))
 
         if not group:
-            message = "❌ Error: Group not found. Please register first."
+            message = "❌ កំហុស: រកមិនឃើញក្រុម។ សូមចុះឈ្មោះជាមុនសិន។"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -153,31 +153,32 @@ class ReportHandler:
 
             # Format report message
             month_names = {
-                1: "January", 2: "February", 3: "March", 4: "April",
-                5: "May", 6: "June", 7: "July", 8: "August",
-                9: "September", 10: "October", 11: "November", 12: "December"
+                1: "មករា", 2: "កុម្ភៈ", 3: "មីនា", 4: "មេសា",
+                5: "ឧសភា", 6: "មិថុនា", 7: "កក្កដា", 8: "សីហា",
+                9: "កញ្ញា", 10: "តុលា", 11: "វិច្ឆិកា", 12: "ធ្នូ"
             }
 
             message_text = (
-                f"📆 Monthly Report - {month_names[report.month]} {report.year}\n\n"
-                f"📊 Summary:\n"
-                f"• Total Vehicles: {report.total_vehicles}\n"
-                f"• Total Trips: {report.total_trips}\n"
-                f"• Total Fuel: {report.total_fuel_liters}L\n"
-                f"• Total Cost: ${report.total_fuel_cost:,.2f}\n"
+                f"📆 របាយការណ៍ប្រចាំខែ - {month_names[report.month]} {report.year}\n\n"
+                f"📊 សង្ខេប:\n"
+                f"• យានជំនិះសរុប: {report.total_vehicles}\n"
+                f"• ដំណើរសរុប: {report.total_trips}\n"
+                f"• សាំងសរុប: {report.total_fuel_liters}L\n"
+                f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}\n"
             )
 
             if report.total_trips > 0:
                 avg_trips_per_day = report.total_trips / report.days_in_month
-                message_text += f"• Avg Trips/Day: {avg_trips_per_day:.1f}\n"
+                message_text += f"• មធ្យមដំណើរ/ថ្ងៃ: {avg_trips_per_day:.1f}\n"
 
             if report.vehicles:
                 message_text += "\n"
 
                 # Create table
                 table_lines = []
-                table_lines.append("Vehicle   |   Trips   | Fuel(L/$)")
-                table_lines.append("-------------------------------")
+                # table_lines.append("យានជំនិះ  |   ដំណើរ   | សាំង(L/$)")
+                table_lines.append("ឡាន    |  ចំនួនដឹក  |  ប្រេង(L/$)")
+                table_lines.append("----------------------------")
 
                 # Sort by total trips descending
                 sorted_vehicles = sorted(report.vehicles, key=lambda v: v.total_trips, reverse=True)
@@ -203,7 +204,7 @@ class ReportHandler:
 
                 message_text += "<pre>" + escape('\n'.join(table_lines)) + "</pre>"
             else:
-                message_text += "\n\n⚠️ No activity recorded for this month."
+                message_text += "\n\n⚠️ គ្មានសកម្មភាពកត់ត្រាសម្រាប់ខែនេះទេ។"
 
             # Display report without buttons (end of session)
             if query:
@@ -212,7 +213,7 @@ class ReportHandler:
                 await update.message.reply_text(message_text, parse_mode=ParseMode.HTML)
 
         except Exception as e:
-            error_message = f"❌ Error generating report: {str(e)}"
+            error_message = f"❌ កំហុសក្នុងការបង្កើតរបាយការណ៍: {str(e)}"
             if query:
                 await query.edit_message_text(error_message)
             else:
@@ -240,7 +241,7 @@ class ReportHandler:
         group = group_repo.find_by_chat_id(str(chat.id))
 
         if not group:
-            message = "❌ Error: Group not found. Please register first."
+            message = "❌ កំហុស: រកមិនឃើញក្រុម។ សូមចុះឈ្មោះជាមុនសិន។"
             if query:
                 await query.edit_message_text(message)
             else:
@@ -254,8 +255,8 @@ class ReportHandler:
 
         if not vehicles:
             message = (
-                "⚠️ No vehicles found!\n\n"
-                "Please setup a vehicle first using /setup"
+                "⚠️ រកមិនឃើញយានជំនិះទេ!\n\n"
+                "សូមរៀបចំយានជំនិះជាមុនសិនដោយប្រើ /setup"
             )
             if query:
                 await query.edit_message_text(message)
@@ -278,10 +279,10 @@ class ReportHandler:
                 InlineKeyboardButton(label, callback_data=f"perf_vehicle_{vehicle.id}")
             ])
 
-        keyboard.append([InlineKeyboardButton("🏠 Back to Menu", callback_data="back_to_menu")])
+        keyboard.append([InlineKeyboardButton("🏠 ត្រឡប់ទៅម៉ឺនុយ", callback_data="back_to_menu")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message_text = "📈 Vehicle Performance Report\n\nSelect vehicle:"
+        message_text = "📈 របាយការណ៍ការអនុវត្តរបស់យានជំនិះ\n\nជ្រើសរើសយានជំនិះ:"
 
         if query:
             await query.edit_message_text(message_text, reply_markup=reply_markup)
@@ -306,12 +307,12 @@ class ReportHandler:
             emoji = type_emoji.get(report.vehicle_type, "🚗")
 
             message_text = (
-                f"📈 Vehicle Performance Report\n\n"
+                f"📈 របាយការណ៍ការអនុវត្តរបស់យានជំនិះ\n\n"
                 f"{emoji} {report.license_plate}\n"
             )
 
             if report.driver_name:
-                message_text += f"👤 Driver: {report.driver_name}\n"
+                message_text += f"👤 អ្នកបើកបរ: {report.driver_name}\n"
 
             # Format trips as "count/loadingm³"
             if report.month_total_loading_size > 0:
@@ -320,28 +321,28 @@ class ReportHandler:
                 trips_display = f"{report.month_total_trips}"
 
             message_text += (
-                f"\n📊 This Month Summary:\n"
-                f"• Total Trips: {trips_display}\n"
+                f"\n📊 សង្ខេបខែនេះ:\n"
+                f"• ដំណើរសរុប: {trips_display}\n"
             )
 
             if report.month_total_fuel > 0:
                 message_text += (
-                    f"• Total Fuel: {report.month_total_fuel}L\n"
-                    f"• Total Cost: ${report.month_total_cost:,.2f}\n"
+                    f"• សាំងសរុប: {report.month_total_fuel}L\n"
+                    f"• ចំណាយសរុប: ${report.month_total_cost:,.2f}\n"
                 )
 
             message_text += (
-                f"• Avg Trips/Day: {report.month_avg_trips_per_day:.1f}\n"
+                f"• មធ្យមដំណើរ/ថ្ងៃ: {report.month_avg_trips_per_day:.1f}\n"
             )
 
             if report.month_avg_fuel_per_trip > 0:
                 message_text += (
-                    f"• Avg Fuel/Trip: {report.month_avg_fuel_per_trip:.1f}L\n"
-                    f"• Avg Cost/Trip: ${report.month_avg_cost_per_trip:,.2f}\n"
+                    f"• មធ្យមសាំង/ដំណើរ: {report.month_avg_fuel_per_trip:.1f}L\n"
+                    f"• មធ្យមចំណាយ/ដំណើរ: ${report.month_avg_cost_per_trip:,.2f}\n"
                 )
 
             # Show last 7 days breakdown
-            message_text += "\n\n📅 Last 7 Days:\n"
+            message_text += "\n\n📅 ៧ថ្ងៃចុងក្រោយ:\n"
             for day_data in report.last_7_days:
                 # Format date as day name
                 from datetime import datetime
@@ -356,15 +357,15 @@ class ReportHandler:
                             trips_display = f"{day_data.trips}/{day_data.total_loading_size:.0f}m³"
                         else:
                             trips_display = f"{day_data.trips}"
-                        message_text += f"  • Trips: {trips_display}\n"
+                        message_text += f"  • ដំណើរ: {trips_display}\n"
                     if day_data.fuel_liters > 0:
-                        message_text += f"  • Fuel: {day_data.fuel_liters}L (${day_data.fuel_cost:,.2f})\n"
+                        message_text += f"  • សាំង: {day_data.fuel_liters}L (${day_data.fuel_cost:,.2f})\n"
 
             # Display report without buttons (end of session)
             await query.edit_message_text(message_text)
 
         except Exception as e:
-            await query.edit_message_text(f"❌ Error: {str(e)}")
+            await query.edit_message_text(f"❌ កំហុស: {str(e)}")
 
         return ConversationHandler.END
 
@@ -378,11 +379,11 @@ class ReportHandler:
         export_type = "Excel" if "excel" in query.data else "PDF"
 
         await query.answer(
-            f"📊 {export_type} export feature coming soon!",
+            f"📊 មុខងារនាំចេញ {export_type} នឹងមកដល់ឆាប់ៗនេះ!",
             show_alert=True
         )
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel operation"""
-        await update.message.reply_text("Operation cancelled.")
+        await update.message.reply_text("ប្រតិបត្តិការត្រូវបានបោះបង់។")
         return ConversationHandler.END

@@ -45,19 +45,19 @@ class CheckInHandler:
             bot_username = context.bot.username
             deep_link = f"https://t.me/{bot_username}?start=checkin" if bot_username else "https://t.me"
 
-            keyboard = [[InlineKeyboardButton("Go to Checkin", url=deep_link)]]
+            keyboard = [[InlineKeyboardButton("ទៅកាន់ការចុះឈ្មោះ", url=deep_link)]]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if update.callback_query:
                 await update.callback_query.edit_message_text(
-                    "Tap the button below to open our private chat and finish your check-in.",
+                    "ចុចប៊ូតុងខាងក្រោមដើម្បីបើកការសន្ទនាឯកជន និងបញ្ចប់ការចុះឈ្មោះរបស់អ្នក។",
                     reply_markup=reply_markup
                 )
                 # Store message ID to remove button later
                 context.user_data['check_in_message_id'] = update.callback_query.message.message_id
             else:
                 sent_msg = await message.reply_text(
-                    "Tap the button below to open our private chat and finish your check-in.",
+                    "ចុចប៊ូតុងខាងក្រោមដើម្បីបើកការសន្ទនាឯកជន និងបញ្ចប់ការចុះឈ្មោះរបស់អ្នក។",
                     reply_markup=reply_markup
                 )
                 # Store message ID to remove button later
@@ -68,16 +68,16 @@ class CheckInHandler:
         group_context = context.user_data.get('check_in_group')
         if not group_context:
             await message.reply_text(
-                "I don't know which group to check you into."
-                "\nGo back to the group chat and press '📍 Check In' there first."
+                "ខ្ញុំមិនដឹងថាត្រូវចុះឈ្មោះអ្នកទៅក្រុមណាទេ។"
+                "\nសូមត្រឡប់ទៅការសន្ទនាក្រុម ហើយចុចប៊ូតុង '📍 ចុះឈ្មោះ' នៅទីនោះសិន។"
             )
             return ConversationHandler.END
 
-        keyboard = [[KeyboardButton("📍 Share Location", request_location=True)]]
+        keyboard = [[KeyboardButton("📍 ចែករំលែកទីតាំង", request_location=True)]]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
         await message.reply_text(
-            "Please share your location to check in:",
+            "សូមចែករំលែកទីតាំងរបស់អ្នកដើម្បីចុះឈ្មោះ:",
             reply_markup=reply_markup
         )
         return WAITING_LOCATION
@@ -97,8 +97,8 @@ class CheckInHandler:
             group_context = context.user_data.get('check_in_group')
             if not group_context:
                 await update.message.reply_text(
-                    "I don't know which group to check you into."
-                    "\nGo back to the group chat and press '📍 Check In' there first."
+                    "ខ្ញុំមិនដឹងថាត្រូវចុះឈ្មោះអ្នកទៅក្រុមណាទេ។"
+                    "\nសូមត្រឡប់ទៅការសន្ទនាក្រុម ហើយចុចប៊ូតុង '📍 ចុះឈ្មោះ' នៅទីនោះសិន។"
                 )
                 return ConversationHandler.END
 
@@ -110,7 +110,7 @@ class CheckInHandler:
         employee = self.get_employee_use_case.execute_by_telegram_id(str(user.id))
 
         if not employee:
-            await update.message.reply_text("Please register first using /register")
+            await update.message.reply_text("សូមចុះឈ្មោះជាមុនសិនដោយប្រើ /register")
             return ConversationHandler.END
 
         try:
@@ -136,33 +136,33 @@ class CheckInHandler:
             )
             response = self.record_check_in_use_case.execute(request)
 
-            group_name = target_chat_title or f"Group {target_chat_id}"
+            group_name = target_chat_title or f"ក្រុម {target_chat_id}"
             await update.message.reply_text(
                 f"✅ {response.message}\n"
-                f"Employee: {employee.name}\n"
-                f"Group: {group_name}\n"
-                f"Time: {response.timestamp}\n"
-                f"Location: {response.location}"
+                f"បុគ្គលិក: {employee.name}\n"
+                f"ក្រុម: {group_name}\n"
+                f"ពេលវេលា: {response.timestamp}\n"
+                f"ទីតាំង: {response.location}"
             )
             # Share a link back to the originating group in the private chat
             if chat.type not in ['group', 'supergroup']:
-                group_name = target_chat_title or "your group"
+                group_name = target_chat_title or "ក្រុមរបស់អ្នក"
                 if target_chat_username:
                     group_link = f"https://t.me/{target_chat_username}"
                     await update.message.reply_text(
-                        f"🔁 Back to {group_name}: {group_link}",
+                        f"🔁 ត្រឡប់ទៅ {group_name}: {group_link}",
                         disable_web_page_preview=True
                     )
                 else:
                     await update.message.reply_text(
-                        f"✅ Check-in recorded for {group_name}"
+                        f"✅ ការចុះឈ្មោះត្រូវបានកត់ត្រាសម្រាប់ {group_name}"
                     )
 
             # Notify the group about the successful check-in
             group_message = (
-                f"✅ {employee.name} checked in successfully.\n"
-                f"Time: {response.timestamp}\n"
-                f"Location: {response.location}"
+                f"✅ {employee.name} បានចុះឈ្មោះដោយជោគជ័យ។\n"
+                f"ពេលវេលា: {response.timestamp}\n"
+                f"ទីតាំង: {response.location}"
             )
             try:
                 await context.bot.send_message(chat_id=target_chat_id, text=group_message)
@@ -182,7 +182,7 @@ class CheckInHandler:
             except TelegramError as notify_error:
                 if chat.type not in ['group', 'supergroup']:
                     await update.message.reply_text(
-                        "Check-in recorded, but I couldn't notify the group: "
+                        "ការចុះឈ្មោះត្រូវបានកត់ត្រា ប៉ុន្តែខ្ញុំមិនអាចជូនដំណឹងដល់ក្រុមបានទេ: "
                         f"{notify_error.message if hasattr(notify_error, 'message') else str(notify_error)}"
                     )
             finally:
@@ -192,6 +192,6 @@ class CheckInHandler:
             if chat.type not in ['group', 'supergroup']:
                 await show_menu_callback(update, context, employee.name)
         except Exception as e:
-            await update.message.reply_text(f"Error: {str(e)}")
+            await update.message.reply_text(f"កំហុស: {str(e)}")
 
         return ConversationHandler.END

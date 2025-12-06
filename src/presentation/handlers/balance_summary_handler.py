@@ -5,15 +5,15 @@ from ...application.use_cases.get_balance_summary import GetBalanceSummaryUseCas
 class BalanceSummaryHandler:
     # List of months for selection
     MONTHS = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+        "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
+        "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"
     ]
 
     def __init__(self, get_balance_summary_use_case: GetBalanceSummaryUseCase):
         self.get_balance_summary_use_case = get_balance_summary_use_case
 
     async def show_month_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                   callback_prefix: str = "BALANCE_MONTH", title: str = "📅 Select a month to view balance summary:"):
+                                   callback_prefix: str = "BALANCE_MONTH", title: str = "📅 ជ្រើសរើសខែដើម្បីមើលសង្ខេបសមតុល្យ:"):
         """Show month selection keyboard
 
         Args:
@@ -67,7 +67,7 @@ class BalanceSummaryHandler:
                 await message.reply_text(summary, parse_mode='HTML')
         except Exception as e:
             # If there's an error, send without formatting
-            error_message = f"❌ Failed to retrieve balance summary.\n\nError: {str(e)}"
+            error_message = f"❌ បរាជ័យក្នុងការទាញយកសង្ខេបសមតុល្យ។\n\nកំហុស: {str(e)}"
 
             if query:
                 await query.answer()

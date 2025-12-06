@@ -24,7 +24,7 @@ class EmployeeHandler:
 
         if not employee:
             await update.message.reply_text(
-                f"Welcome {user.first_name}! Please enter your full name to register:"
+                f"ស្វាគមន៍ {user.first_name}! សូមបញ្ចូលឈ្មោះពេញរបស់អ្នកដើម្បីចុះឈ្មោះ:"
             )
             return WAITING_EMPLOYEE_NAME
 
@@ -44,9 +44,9 @@ class EmployeeHandler:
             )
             employee = self.register_employee_use_case.execute(request)
 
-            await update.message.reply_text(f"Registration successful! Welcome {employee.name}!")
+            await update.message.reply_text(f"ការចុះឈ្មោះជោគជ័យ! ស្វាគមន៍ {employee.name}!")
             await show_menu_callback(update, context, employee.name)
         except ValueError as e:
-            await update.message.reply_text(f"Error: {str(e)}")
+            await update.message.reply_text(f"កំហុស: {str(e)}")
 
         return ConversationHandler.END

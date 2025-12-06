@@ -96,25 +96,25 @@ class BotApplication:
         user = update.effective_user
 
         keyboard = [
-            [InlineKeyboardButton("📍 Check In", url="https://t.me/OALocal_bot/checkin")],
-            [InlineKeyboardButton("📝 Request Advance", callback_data="REQUEST_ADVANCE")],
+            [InlineKeyboardButton("📍 ចុះឈ្មោះ", url="https://t.me/OALocal_bot/checkin")],
+            [InlineKeyboardButton("📝 ស្នើសុំបុរេ", callback_data="REQUEST_ADVANCE")],
         ]
 
         if user.id in settings.ADMIN_IDS:
-            keyboard.append([InlineKeyboardButton("💰 Record Salary Advance", callback_data="SALARY_ADVANCE")])
+            keyboard.append([InlineKeyboardButton("💰 កត់ត្រាបុរេប្រាក់ខែ", callback_data="SALARY_ADVANCE")])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         message = update.effective_message
         name = employee_name or user.first_name
         menu_text = (
-            f"Welcome back {name}!\nPlease select an option:\n"
-            "1. 📍 Check In\n"
-            "2. 📝 Request Advance"
+            f"សូមស្វាគមន៍ {name}!\nសូមជ្រើសរើសជម្រើសមួយ:\n"
+            "1. 📍 ចុះឈ្មោះ\n"
+            "2. 📝 ស្នើសុំបុរេ"
         )
 
         if user.id in settings.ADMIN_IDS:
-            menu_text += "\n3. 💰 Record Salary Advance"
+            menu_text += "\n3. 💰 កត់ត្រាបុរេប្រាក់ខែ"
 
         chat_data = context.chat_data
         query = update.callback_query
@@ -171,7 +171,7 @@ class BotApplication:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancel conversation"""
-        await update.message.reply_text("Operation cancelled.")
+        await update.message.reply_text("ប្រតិបត្តិការត្រូវបានបោះបង់។")
         await self.show_menu(update, context)
         return ConversationHandler.END
 
@@ -207,7 +207,7 @@ class BotApplication:
             if chat.type == 'private':
                 if message:
                     await message.reply_text(
-                        "In private chat, please use /start instead of /menu."
+                        "នៅក្នុងការសន្ទនាឯកជន សូមប្រើ /start ជំនួសឱ្យ /menu។"
                     )
                 return
 
@@ -218,7 +218,7 @@ class BotApplication:
 
             if not employee:
                 await message.reply_text(
-                    "Please register first by starting a private chat with the bot and using /start."
+                    "សូមចុះឈ្មោះជាមុនសិនដោយចាប់ផ្តើមការសន្ទនាឯកជនជាមួយបូត និងប្រើ /start។"
                 )
                 return
 
@@ -233,7 +233,7 @@ class BotApplication:
             # Only works in group chats
             if chat.type not in ['group', 'supergroup']:
                 if message:
-                    await message.reply_text("This command only works in group chats.")
+                    await message.reply_text("ពាក្យបញ្ជានេះដំណើរការតែនៅក្នុងការសន្ទនាក្រុមប៉ុណ្ណោះ។")
                 return
 
             # Register the group
@@ -242,12 +242,12 @@ class BotApplication:
 
             group = register_group_use_case.execute(
                 chat_id=str(chat.id),
-                name=chat.title or "Unknown Group"
+                name=chat.title or "ក្រុមមិនស្គាល់"
             )
             session.close()
 
             await message.reply_text(
-                f"✅ Group '{group.name}' has been registered successfully!"
+                f"✅ ក្រុម '{group.name}' ត្រូវបានចុះឈ្មោះដោយជោគជ័យ!"
             )
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -291,7 +291,7 @@ class BotApplication:
                 context.chat_data['menu_message_id'] = query.message.message_id
 
             message = update.effective_message
-            await message.reply_text("The request advance feature is coming soon.")
+            await message.reply_text("មុខងារស្នើសុំបុរេនឹងមកដល់ឆាប់ៗនេះ។")
             await self.show_menu(update, context)
 
         # Salary advance handlers
@@ -613,13 +613,13 @@ class BotApplication:
             """Handle cancel button from main menu"""
             query = update.callback_query
             await query.answer()
-            await query.edit_message_text("❌ Menu cancelled.")
+            await query.edit_message_text("❌ ម៉ឺនុយត្រូវបានបោះបង់។")
 
         async def cancel_setup_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle cancel button from setup menu"""
             query = update.callback_query
             await query.answer()
-            await query.edit_message_text("❌ Setup cancelled.")
+            await query.edit_message_text("❌ ការរៀបចំត្រូវបានបោះបង់។")
             return ConversationHandler.END
 
         # Registration conversation handler
