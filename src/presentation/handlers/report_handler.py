@@ -83,9 +83,9 @@ class ReportHandler:
                     # Format vehicle column (plate number only)
                     vehicle_str = vehicle_data.license_plate
 
-                    # Format trips column as "count/loadingm³"
+                    # Format trips column as "count(loadingm³)"
                     if vehicle_data.total_loading_size > 0:
-                        trips_str = f"{vehicle_data.trip_count}/{vehicle_data.total_loading_size:.0f}m³"
+                        trips_str = f"{vehicle_data.trip_count}({vehicle_data.total_loading_size:.0f}m³)"
                     else:
                         trips_str = str(vehicle_data.trip_count)
 
