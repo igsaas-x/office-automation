@@ -64,11 +64,11 @@ class ReportHandler:
             message_parts = [
                 f"📅 របាយការណ៍ប្រចាំថ្ងៃ - {escape(report.date)}",
                 "",
-                "📊 សង្ខេប:",
-                f"• ដំណើរសរុប: {report.total_trips}",
-                f"• សាំងសរុប: {report.total_fuel_liters}L",
-                f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}",
-                ""
+                # "📊 សង្ខេប:",
+                # f"• ដំណើរសរុប: {report.total_trips}",
+                # f"• សាំងសរុប: {report.total_fuel_liters}L",
+                # f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}",
+                # ""
             ]
 
             if not report.vehicles:
@@ -76,7 +76,7 @@ class ReportHandler:
             else:
                 # Create consolidated table
                 table_lines = []
-                table_lines.append("   ឡាន    |  ចំនួនដឹក   |  ប្រេង(L/$)")
+                table_lines.append("   ឡាន       ចំនួនដឹក      ប្រេង(L/$)")
                 table_lines.append("--------------------------------")
 
                 for vehicle_data in report.vehicles:
@@ -160,11 +160,11 @@ class ReportHandler:
 
             message_text = (
                 f"📆 របាយការណ៍ប្រចាំខែ - {month_names[report.month]} {report.year}\n\n"
-                f"📊 សង្ខេប:\n"
-                f"• យានជំនិះសរុប: {report.total_vehicles}\n"
-                f"• ដំណើរសរុប: {report.total_trips}\n"
-                f"• សាំងសរុប: {report.total_fuel_liters}L\n"
-                f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}\n"
+                # f"📊 សង្ខេប:\n"
+                # f"• យានជំនិះសរុប: {report.total_vehicles}\n"
+                # f"• ដំណើរសរុប: {report.total_trips}\n"
+                # f"• សាំងសរុប: {report.total_fuel_liters}L\n"
+                # f"• ចំណាយសរុប: ${report.total_fuel_cost:,.2f}\n"
             )
 
             if report.total_trips > 0:
@@ -177,7 +177,7 @@ class ReportHandler:
                 # Create table
                 table_lines = []
                 # table_lines.append("យានជំនិះ  |   ដំណើរ   | សាំង(L/$)")
-                table_lines.append("    ឡាន   |  ចំនួនដឹក   |  ប្រេង(L/$)")
+                table_lines.append("    ឡាន      ចំនួនដឹក      ប្រេង(L/$)")
                 table_lines.append("--------------------------------")
 
                 # Sort by total trips descending
