@@ -77,6 +77,11 @@ class ReportHandler:
                 table_lines = ["   ឡាន       ចំនួនដឹក      ប្រេង($)",
                                "--------------------------------"]
 
+                # Calculate totals
+                total_trips = 0
+                total_loading_size = 0
+                total_fuel_cost = 0
+
                 for vehicle_data in report.vehicles:
                     # Format vehicle column (plate number only)
                     vehicle_str = vehicle_data.license_plate
@@ -95,6 +100,28 @@ class ReportHandler:
 
                     # Build the row with pipe separators and centered alignment
                     table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
+
+                    # Accumulate totals
+                    total_trips += vehicle_data.trip_count
+                    total_loading_size += vehicle_data.total_loading_size
+                    total_fuel_cost += vehicle_data.total_fuel_cost
+
+                # Add total row
+                table_lines.append("--------------------------------")
+
+                # Format total trips
+                if total_loading_size > 0:
+                    total_trips_str = f"{total_trips}({total_loading_size:.0f}m³)"
+                else:
+                    total_trips_str = str(total_trips)
+
+                # Format total fuel
+                if total_fuel_cost > 0:
+                    total_fuel_str = f"{total_fuel_cost:.0f}$"
+                else:
+                    total_fuel_str = "—"
+
+                table_lines.append(f"សរុប:     |{total_trips_str:^11}| {total_fuel_str}")
 
                 message_parts.append("<pre>")
                 message_parts.append(escape('\n'.join(table_lines)))
@@ -180,6 +207,11 @@ class ReportHandler:
                 # Sort by total trips descending
                 sorted_vehicles = sorted(report.vehicles, key=lambda v: v.total_trips, reverse=True)
 
+                # Calculate totals
+                total_trips = 0
+                total_loading_size = 0
+                total_fuel_cost = 0
+
                 for vehicle_data in sorted_vehicles:
                     # Format vehicle column (plate number only)
                     vehicle_str = vehicle_data.license_plate
@@ -198,6 +230,28 @@ class ReportHandler:
 
                     # Build the row with pipe separators and centered alignment
                     table_lines.append(f"{vehicle_str:<10}|{trips_str:^11}| {fuel_str}")
+
+                    # Accumulate totals
+                    total_trips += vehicle_data.total_trips
+                    total_loading_size += vehicle_data.total_loading_size
+                    total_fuel_cost += vehicle_data.total_fuel_cost
+
+                # Add total row
+                table_lines.append("--------------------------------")
+
+                # Format total trips
+                if total_loading_size > 0:
+                    total_trips_str = f"{total_trips}({total_loading_size:.0f}m³)"
+                else:
+                    total_trips_str = str(total_trips)
+
+                # Format total fuel
+                if total_fuel_cost > 0:
+                    total_fuel_str = f"{total_fuel_cost:.0f}$"
+                else:
+                    total_fuel_str = "—"
+
+                table_lines.append(f"សរុប:     |{total_trips_str:^11}| {total_fuel_str}")
 
                 message_text += "<pre>" + escape('\n'.join(table_lines)) + "</pre>"
             else:
