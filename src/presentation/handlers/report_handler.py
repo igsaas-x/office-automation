@@ -80,6 +80,7 @@ class ReportHandler:
                 # Calculate totals
                 total_trips = 0
                 total_loading_size = 0
+                total_fuel_liters = 0
                 total_fuel_cost = 0
 
                 for vehicle_data in report.vehicles:
@@ -104,6 +105,7 @@ class ReportHandler:
                     # Accumulate totals
                     total_trips += vehicle_data.trip_count
                     total_loading_size += vehicle_data.total_loading_size
+                    total_fuel_liters += vehicle_data.total_fuel_liters
                     total_fuel_cost += vehicle_data.total_fuel_cost
 
                 # Add total row
@@ -116,8 +118,8 @@ class ReportHandler:
                     total_trips_str = str(total_trips)
 
                 # Format total fuel
-                if total_fuel_cost > 0:
-                    total_fuel_str = f"{total_fuel_cost:.0f}$"
+                if total_fuel_liters > 0:
+                    total_fuel_str = f"{total_fuel_liters:.0f}L({total_fuel_cost:.0f}$)"
                 else:
                     total_fuel_str = "—"
 
@@ -210,6 +212,7 @@ class ReportHandler:
                 # Calculate totals
                 total_trips = 0
                 total_loading_size = 0
+                total_fuel_liters = 0
                 total_fuel_cost = 0
 
                 for vehicle_data in sorted_vehicles:
@@ -234,6 +237,7 @@ class ReportHandler:
                     # Accumulate totals
                     total_trips += vehicle_data.total_trips
                     total_loading_size += vehicle_data.total_loading_size
+                    total_fuel_liters += vehicle_data.total_fuel_liters
                     total_fuel_cost += vehicle_data.total_fuel_cost
 
                 # Add total row
@@ -246,8 +250,8 @@ class ReportHandler:
                     total_trips_str = str(total_trips)
 
                 # Format total fuel
-                if total_fuel_cost > 0:
-                    total_fuel_str = f"{total_fuel_cost:.0f}$"
+                if total_fuel_liters > 0:
+                    total_fuel_str = f"{total_fuel_liters:.0f}L({total_fuel_cost:.0f}$)"
                 else:
                     total_fuel_str = "—"
 
