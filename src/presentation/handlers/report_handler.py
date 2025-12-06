@@ -331,9 +331,9 @@ class ReportHandler:
                     f"• ចំណាយសរុប: ${report.month_total_cost:,.2f}\n"
                 )
 
-            message_text += (
-                f"• មធ្យមដំណើរ/ថ្ងៃ: {report.month_avg_trips_per_day:.1f}\n"
-            )
+            # message_text += (
+            #     f"• មធ្យមដំណើរ/ថ្ងៃ: {report.month_avg_trips_per_day:.1f}\n"
+            # )
 
             if report.month_avg_fuel_per_trip > 0:
                 message_text += (
