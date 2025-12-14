@@ -26,7 +26,7 @@ class Settings:
     MONGODB_MAX_POOL_SIZE: int = int(os.getenv('MONGODB_MAX_POOL_SIZE', '10'))
 
     # JWT configuration (for admin portal authentication)
-    JWT_SECRET_KEY: str = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+    JWT_SECRET_KEY: str = os.getenv('JWT_SECRET_KEY', 'azd34##dsf09900011FF$$')
     JWT_ACCESS_TOKEN_EXPIRES: int = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', '28800'))  # 8 hours in seconds
     JWT_REFRESH_TOKEN_EXPIRES: int = int(os.getenv('JWT_REFRESH_TOKEN_EXPIRES', '2592000'))  # 30 days in seconds
     JWT_ALGORITHM: str = os.getenv('JWT_ALGORITHM', 'HS256')
