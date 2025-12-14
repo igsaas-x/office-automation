@@ -48,6 +48,59 @@ def list_all_groups():
     responses:
       200:
         description: List of all groups
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      chat_id:
+                        type: string
+                        example: "-1001234567890"
+                      name:
+                        type: string
+                        example: "My Group"
+                      created_at:
+                        type: string
+                        example: "2023-12-14T10:00:00"
+                      has_form:
+                        type: boolean
+                        example: true
+                      form_info:
+                        type: object
+                        properties:
+                          form_config_id:
+                            type: string
+                            example: "67abc123def456"
+                          form_name:
+                            type: string
+                            example: "Registration Form"
+                          opnform_form_id:
+                            type: string
+                            example: "opnform-123"
+                      submission_count:
+                        type: integer
+                        example: 42
+                total:
+                  type: integer
+                  example: 100
+                limit:
+                  type: integer
+                  example: 50
+                offset:
+                  type: integer
+                  example: 0
       401:
         description: Unauthorized
     """
@@ -152,6 +205,64 @@ def get_group_details(group_id):
     responses:
       200:
         description: Group details
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                chat_id:
+                  type: string
+                  example: "-1001234567890"
+                name:
+                  type: string
+                  example: "My Group"
+                created_at:
+                  type: string
+                  example: "2023-12-14T10:00:00"
+                has_form:
+                  type: boolean
+                  example: true
+                form_info:
+                  type: object
+                  properties:
+                    form_config_id:
+                      type: string
+                      example: "67abc123def456"
+                    form_name:
+                      type: string
+                      example: "Registration Form"
+                    opnform_form_id:
+                      type: string
+                      example: "opnform-123"
+                    is_active:
+                      type: boolean
+                      example: true
+                submission_count:
+                  type: integer
+                  example: 42
+                recent_submissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67submission123"
+                      form_config_id:
+                        type: string
+                        example: "67abc123def456"
+                      submission_data:
+                        type: object
+                      created_at:
+                        type: string
+                        example: "2023-12-14T10:00:00"
       404:
         description: Group not found
     """
@@ -239,6 +350,30 @@ def get_group_stats():
     responses:
       200:
         description: Group statistics
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                total_groups:
+                  type: integer
+                  example: 150
+                groups_with_forms:
+                  type: integer
+                  example: 45
+                groups_without_forms:
+                  type: integer
+                  example: 105
+                total_submissions:
+                  type: integer
+                  example: 1234
+                recent_groups_7d:
+                  type: integer
+                  example: 12
     """
     try:
         session = database.get_session()
@@ -319,10 +454,52 @@ def link_form_to_group(group_id):
     responses:
       200:
         description: Form linked successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                form_config_id:
+                  type: string
+                  example: "67abc123def456"
+                opnform_form_id:
+                  type: string
+                  example: "opnform-form-123"
+                form_name:
+                  type: string
+                  example: "Registration Form"
+                group_id:
+                  type: integer
+                  example: 1
+                group_chat_id:
+                  type: string
+                  example: "-1001234567890"
       404:
         description: Group not found
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Group not found"
       400:
         description: Invalid request
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "opnform_form_id is required"
     """
     try:
         data = request.get_json()
@@ -414,8 +591,38 @@ def get_webhook_url(group_id):
     responses:
       200:
         description: Webhook URL
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                webhook_url:
+                  type: string
+                  example: "http://localhost:3000/api/webhooks/opnform/67abc123def456"
+                form_config_id:
+                  type: string
+                  example: "67abc123def456"
+                opnform_form_id:
+                  type: string
+                  example: "opnform-form-123"
+                form_name:
+                  type: string
+                  example: "Registration Form"
       404:
         description: Group not found or no form linked
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "No form linked to this group"
     """
     try:
         # Verify group exists in MySQL
@@ -498,8 +705,67 @@ def get_group_submissions(group_id):
     responses:
       200:
         description: List of submissions
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                submissions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: "67submission123"
+                      form_config_id:
+                        type: string
+                        example: "67abc123def456"
+                      opnform_submission_id:
+                        type: string
+                        example: "sub-123"
+                      submission_data:
+                        type: object
+                        description: The actual form submission data from OpnForm
+                      processing_status:
+                        type: string
+                        example: "received"
+                      created_at:
+                        type: string
+                        example: "2023-12-14T10:00:00"
+                total:
+                  type: integer
+                  example: 100
+                limit:
+                  type: integer
+                  example: 50
+                offset:
+                  type: integer
+                  example: 0
+                group_id:
+                  type: integer
+                  example: 1
+                group_name:
+                  type: string
+                  example: "My Group"
+                form_name:
+                  type: string
+                  example: "Registration Form"
       404:
         description: Group not found
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Group not found"
     """
     try:
         # Verify group exists in MySQL

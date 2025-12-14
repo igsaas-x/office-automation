@@ -90,6 +90,14 @@ def create_app():
                 "description": "Admin portal authentication with JWT tokens"
             },
             {
+                "name": "Admin - Groups",
+                "description": "Admin portal group management and OpnForm integration"
+            },
+            {
+                "name": "Webhooks",
+                "description": "Webhook endpoints for receiving OpnForm submissions"
+            },
+            {
                 "name": "Employees",
                 "description": "Employee registration and management"
             },

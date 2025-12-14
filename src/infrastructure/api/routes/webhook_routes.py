@@ -38,10 +38,46 @@ def receive_opnform_submission(form_config_id):
     responses:
       200:
         description: Submission received and stored
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                submission_id:
+                  type: string
+                  example: "67submission123"
+                form_config_id:
+                  type: string
+                  example: "67abc123def456"
+                status:
+                  type: string
+                  example: "received"
       400:
         description: Invalid request
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "No submission data provided"
       404:
         description: Form configuration not found
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Form configuration not found"
     """
     try:
         # Validate form_config_id
@@ -124,6 +160,33 @@ def test_webhook(form_config_id):
     responses:
       200:
         description: Webhook endpoint is active
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Webhook endpoint is active"
+            data:
+              type: object
+              properties:
+                form_config_id:
+                  type: string
+                  example: "67abc123def456"
+                opnform_form_id:
+                  type: string
+                  example: "opnform-form-123"
+                form_name:
+                  type: string
+                  example: "Registration Form"
+                is_active:
+                  type: boolean
+                  example: true
+                telegram_group_chat_id:
+                  type: string
+                  example: "-1001234567890"
     """
     try:
         # Validate form_config_id
