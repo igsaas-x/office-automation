@@ -116,6 +116,9 @@ class MongoDBConnection:
             ])
             self._db.report_cache.create_index("expires_at", expireAfterSeconds=0)  # TTL index
 
+            # Add telegram_group_chat_id index to form_configurations (for linking to MySQL groups)
+            self._db.form_configurations.create_index("telegram_group_chat_id")
+
             logger.info("MongoDB indexes created successfully")
 
         except Exception as e:

@@ -122,8 +122,10 @@ def create_app():
     from .routes.checkin_routes import checkin_bp
     from .routes.employee_routes import employee_bp
     from .routes.auth_routes import auth_bp
+    from .routes.admin_group_routes import admin_group_bp
     app.register_blueprint(checkin_bp, url_prefix='/api')
     app.register_blueprint(employee_bp, url_prefix='/api')
     app.register_blueprint(auth_bp)  # auth_bp already has /api/auth prefix
+    app.register_blueprint(admin_group_bp)  # admin_group_bp already has /api/admin/groups prefix
 
     return app
