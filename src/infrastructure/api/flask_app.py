@@ -75,6 +75,10 @@ def create_app():
         "schemes": ["http", "https"],
         "tags": [
             {
+                "name": "Authentication",
+                "description": "Admin portal authentication with JWT tokens"
+            },
+            {
                 "name": "Employees",
                 "description": "Employee registration and management"
             },
@@ -90,7 +94,15 @@ def create_app():
                 "name": "Health",
                 "description": "API health check"
             }
-        ]
+        ],
+        "securityDefinitions": {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header",
+                "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+            }
+        }
     }
 
     Swagger(app, config=swagger_config, template=swagger_template)

@@ -78,36 +78,87 @@ def verify_telegram_login_widget(auth_data: dict, bot_token: str) -> bool:
 def telegram_login():
     """
     Authenticate admin via Telegram Login Widget
-
-    Endpoint: POST /api/auth/telegram-login
-
-    Request body:
-    {
-        "id": 123456789,
-        "first_name": "John",
-        "last_name": "Doe",
-        "username": "johndoe",
-        "photo_url": "https://...",
-        "auth_date": 1234567890,
-        "hash": "abc123..."
-    }
-
-    Response:
-    {
-        "access_token": "eyJ...",
-        "refresh_token": "eyJ...",
-        "user": {
-            "id": "123456789",
-            "first_name": "John",
-            "username": "johndoe",
-            "role": "admin"
-        }
-    }
-
-    Returns:
-        200: Login successful with JWT tokens
-        401: Invalid Telegram authentication
-        403: User is not an admin
+    ---
+    tags:
+      - Authentication
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        description: Telegram Login Widget authentication data
+        required: true
+        schema:
+          type: object
+          required:
+            - id
+            - hash
+          properties:
+            id:
+              type: integer
+              example: 123456789
+              description: Telegram user ID
+            first_name:
+              type: string
+              example: "John"
+              description: User's first name
+            last_name:
+              type: string
+              example: "Doe"
+              description: User's last name
+            username:
+              type: string
+              example: "johndoe"
+              description: Telegram username
+            photo_url:
+              type: string
+              example: "https://t.me/i/userpic/..."
+              description: Profile photo URL
+            auth_date:
+              type: integer
+              example: 1234567890
+              description: Authentication timestamp
+            hash:
+              type: string
+              example: "abc123..."
+              description: HMAC-SHA256 signature
+    responses:
+      200:
+        description: Login successful with JWT tokens
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: JWT access token (expires in 8 hours)
+            refresh_token:
+              type: string
+              description: JWT refresh token (expires in 30 days)
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Telegram user ID
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                username:
+                  type: string
+                photo_url:
+                  type: string
+                role:
+                  type: string
+                  example: "admin"
+      400:
+        description: Request body is required
+      401:
+        description: Invalid Telegram authentication
+      403:
+        description: User is not an admin or account is inactive
+      500:
+        description: Internal server error
     """
     try:
         data = request.get_json(silent=True)
@@ -225,20 +276,31 @@ def telegram_login():
 def refresh():
     """
     Refresh access token using refresh token
-
-    Endpoint: POST /api/auth/refresh
-
-    Headers:
-        Authorization: Bearer <refresh_token>
-
-    Response:
-    {
-        "access_token": "eyJ..."
-    }
-
-    Returns:
-        200: New access token generated
-        401: Invalid or expired refresh token
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    parameters:
+      - in: header
+        name: Authorization
+        type: string
+        required: true
+        description: Bearer refresh_token
+        example: "Bearer eyJ..."
+    responses:
+      200:
+        description: New access token generated
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+              description: New JWT access token
+      401:
+        description: Invalid or expired refresh token, or user is inactive
+      500:
+        description: Internal server error
     """
     try:
         identity = get_jwt_identity()
@@ -273,26 +335,51 @@ def refresh():
 def get_current_user():
     """
     Get current authenticated admin user
-
-    Endpoint: GET /api/auth/me
-
-    Headers:
-        Authorization: Bearer <access_token>
-
-    Response:
-    {
-        "id": "123456789",
-        "first_name": "John",
-        "last_name": "Doe",
-        "username": "johndoe",
-        "photo_url": "https://...",
-        "role": "admin",
-        "status": "active"
-    }
-
-    Returns:
-        200: User information
-        401: Invalid or expired token
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    parameters:
+      - in: header
+        name: Authorization
+        type: string
+        required: true
+        description: Bearer access_token
+        example: "Bearer eyJ..."
+    responses:
+      200:
+        description: User information
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Telegram user ID
+            first_name:
+              type: string
+            last_name:
+              type: string
+            username:
+              type: string
+            photo_url:
+              type: string
+            role:
+              type: string
+              example: "admin"
+            status:
+              type: string
+              example: "active"
+            last_login:
+              type: string
+              format: date-time
+              description: Last login timestamp (ISO 8601)
+      401:
+        description: Invalid or expired access token
+      403:
+        description: Admin user not found or inactive
+      500:
+        description: Internal server error
     """
     from flask import g
 
@@ -315,23 +402,29 @@ def get_current_user():
 def logout():
     """
     Logout current user
-
-    Note: Since we're using stateless JWT, actual logout is handled client-side
-    by deleting the tokens. This endpoint is here for consistency and can be
-    extended to blacklist tokens if needed in the future.
-
-    Endpoint: POST /api/auth/logout
-
-    Headers:
-        Authorization: Bearer <access_token>
-
-    Response:
-    {
-        "message": "Logged out successfully"
-    }
-
-    Returns:
-        200: Logout successful
+    ---
+    tags:
+      - Authentication
+    security:
+      - Bearer: []
+    parameters:
+      - in: header
+        name: Authorization
+        type: string
+        required: true
+        description: Bearer access_token
+        example: "Bearer eyJ..."
+    responses:
+      200:
+        description: Logout successful
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Logged out successfully"
+      401:
+        description: Invalid or expired access token
     """
     from flask import g
 
