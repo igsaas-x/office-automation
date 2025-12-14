@@ -34,7 +34,7 @@ class Settings:
     # Admin portal configuration
     ADMIN_TELEGRAM_IDS: str = os.getenv('ADMIN_TELEGRAM_IDS', '')  # Comma-separated list of admin Telegram IDs
     ADMIN_PORTAL_URL: str = os.getenv('ADMIN_PORTAL_URL', 'http://localhost:3000')
-    CORS_ALLOWED_ORIGINS: str = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173')
+    CORS_ALLOWED_ORIGINS: str = os.getenv('CORS_ALLOWED_ORIGINS', '*')
 
     # Google Sheets configuration
     BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')

@@ -30,16 +30,27 @@ def create_app():
     # Get admin portal origins from settings
     admin_origins = settings.get_cors_origins()
     telegram_origins = ["https://web.telegram.org", "https://t.me"]
-    all_origins = telegram_origins + admin_origins
 
-    # Configure CORS
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": all_origins,
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+    # Check if wildcard is enabled
+    if admin_origins and admin_origins[0] == '*':
+        # Allow all origins
+        CORS(app, resources={
+            r"/api/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"]
+            }
+        })
+    else:
+        # Use specific origins
+        all_origins = telegram_origins + admin_origins
+        CORS(app, resources={
+            r"/api/*": {
+                "origins": all_origins,
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"]
+            }
+        })
 
     # Configure upload folder
     app.config['UPLOAD_FOLDER'] = 'uploads/photos'
