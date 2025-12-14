@@ -32,7 +32,7 @@ class Settings:
     JWT_ALGORITHM: str = os.getenv('JWT_ALGORITHM', 'HS256')
 
     # Admin portal configuration
-    ADMIN_TELEGRAM_IDS: str = os.getenv('ADMIN_TELEGRAM_IDS', 'chanhengsng,HK_688')  # Comma-separated list of admin Telegram IDs
+    ADMIN_TELEGRAM_IDS: str = os.getenv('ADMIN_TELEGRAM_IDS', '570671598')  # Comma-separated list of admin Telegram IDs
     ADMIN_PORTAL_URL: str = os.getenv('ADMIN_PORTAL_URL', 'http://localhost:3000')
     CORS_ALLOWED_ORIGINS: str = os.getenv('CORS_ALLOWED_ORIGINS', '*')
 
