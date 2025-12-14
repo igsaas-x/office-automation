@@ -285,3 +285,306 @@ def get_group_stats():
     except Exception as e:
         logger.error(f"Error getting group stats: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@admin_group_bp.route('/<int:group_id>/form', methods=['POST'])
+def link_form_to_group(group_id):
+    """
+    Link OpnForm to a group
+    ---
+    tags:
+      - Admin - Groups
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: group_id
+        type: integer
+        required: true
+        description: Group ID (MySQL)
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - opnform_form_id
+          properties:
+            opnform_form_id:
+              type: string
+              description: OpnForm form ID
+            form_name:
+              type: string
+              description: Optional form name
+    responses:
+      200:
+        description: Form linked successfully
+      404:
+        description: Group not found
+      400:
+        description: Invalid request
+    """
+    try:
+        data = request.get_json()
+        opnform_form_id = data.get('opnform_form_id')
+        form_name = data.get('form_name', f'Form for Group {group_id}')
+
+        if not opnform_form_id:
+            return jsonify({"success": False, "error": "opnform_form_id is required"}), 400
+
+        # Verify group exists in MySQL
+        session = database.get_session()
+        group_repo = GroupRepository(session)
+        group = group_repo.find_by_id(group_id)
+
+        if not group:
+            session.close()
+            return jsonify({"success": False, "error": "Group not found"}), 404
+
+        # Create or update form_configuration in MongoDB
+        db_mongo = mongodb.get_database()
+
+        # Check if form already exists for this group
+        existing_config = db_mongo.form_configurations.find_one({
+            'telegram_group_chat_id': group.chat_id
+        })
+
+        from datetime import datetime
+
+        if existing_config:
+            # Update existing configuration
+            db_mongo.form_configurations.update_one(
+                {'_id': existing_config['_id']},
+                {
+                    '$set': {
+                        'opnform_form_id': opnform_form_id,
+                        'form_name': form_name,
+                        'is_active': True,
+                        'updated_at': datetime.utcnow()
+                    }
+                }
+            )
+            form_config_id = str(existing_config['_id'])
+        else:
+            # Create new configuration
+            form_config = {
+                'telegram_group_chat_id': group.chat_id,
+                'opnform_form_id': opnform_form_id,
+                'form_name': form_name,
+                'is_active': True,
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
+            result = db_mongo.form_configurations.insert_one(form_config)
+            form_config_id = str(result.inserted_id)
+
+        session.close()
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "form_config_id": form_config_id,
+                "opnform_form_id": opnform_form_id,
+                "form_name": form_name,
+                "group_id": group_id,
+                "group_chat_id": group.chat_id
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error linking form to group: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@admin_group_bp.route('/<int:group_id>/webhook', methods=['GET'])
+def get_webhook_url(group_id):
+    """
+    Get webhook URL for receiving OpnForm submissions
+    ---
+    tags:
+      - Admin - Groups
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: group_id
+        type: integer
+        required: true
+        description: Group ID (MySQL)
+    responses:
+      200:
+        description: Webhook URL
+      404:
+        description: Group not found or no form linked
+    """
+    try:
+        # Verify group exists in MySQL
+        session = database.get_session()
+        group_repo = GroupRepository(session)
+        group = group_repo.find_by_id(group_id)
+
+        if not group:
+            session.close()
+            return jsonify({"success": False, "error": "Group not found"}), 404
+
+        # Get form configuration from MongoDB
+        db_mongo = mongodb.get_database()
+        form_config = db_mongo.form_configurations.find_one({
+            'telegram_group_chat_id': group.chat_id,
+            'is_active': True
+        })
+
+        if not form_config:
+            session.close()
+            return jsonify({"success": False, "error": "No form linked to this group"}), 404
+
+        # Generate webhook URL
+        from ...config.settings import settings
+        base_url = settings.ADMIN_PORTAL_URL.rstrip('/')
+        webhook_url = f"{base_url}/api/webhooks/opnform/{str(form_config['_id'])}"
+
+        session.close()
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "webhook_url": webhook_url,
+                "form_config_id": str(form_config['_id']),
+                "opnform_form_id": form_config.get('opnform_form_id'),
+                "form_name": form_config.get('form_name')
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting webhook URL: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@admin_group_bp.route('/<int:group_id>/submissions', methods=['GET'])
+def get_group_submissions(group_id):
+    """
+    Get form submissions for a group
+    ---
+    tags:
+      - Admin - Groups
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: group_id
+        type: integer
+        required: true
+        description: Group ID (MySQL)
+      - in: query
+        name: limit
+        type: integer
+        default: 50
+        description: Maximum number of results
+      - in: query
+        name: offset
+        type: integer
+        default: 0
+        description: Number of results to skip
+      - in: query
+        name: start_date
+        type: string
+        format: date
+        description: Filter submissions from this date (YYYY-MM-DD)
+      - in: query
+        name: end_date
+        type: string
+        format: date
+        description: Filter submissions until this date (YYYY-MM-DD)
+    responses:
+      200:
+        description: List of submissions
+      404:
+        description: Group not found
+    """
+    try:
+        # Verify group exists in MySQL
+        session = database.get_session()
+        group_repo = GroupRepository(session)
+        group = group_repo.find_by_id(group_id)
+
+        if not group:
+            session.close()
+            return jsonify({"success": False, "error": "Group not found"}), 404
+
+        # Get form configuration from MongoDB
+        db_mongo = mongodb.get_database()
+        form_config = db_mongo.form_configurations.find_one({
+            'telegram_group_chat_id': group.chat_id,
+            'is_active': True
+        })
+
+        if not form_config:
+            session.close()
+            return jsonify({
+                "success": True,
+                "data": {
+                    "submissions": [],
+                    "total": 0,
+                    "message": "No form linked to this group"
+                }
+            }), 200
+
+        # Build query filter
+        query_filter = {'form_config_id': form_config['_id']}
+
+        # Date filters
+        from datetime import datetime
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        if start_date or end_date:
+            query_filter['created_at'] = {}
+            if start_date:
+                query_filter['created_at']['$gte'] = datetime.fromisoformat(start_date)
+            if end_date:
+                # Add one day to include the end_date
+                end_datetime = datetime.fromisoformat(end_date)
+                from datetime import timedelta
+                query_filter['created_at']['$lt'] = end_datetime + timedelta(days=1)
+
+        # Get total count
+        total = db_mongo.form_submissions.count_documents(query_filter)
+
+        # Pagination
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+
+        # Get submissions
+        submissions = list(db_mongo.form_submissions.find(
+            query_filter,
+            sort=[('created_at', -1)],
+            skip=offset,
+            limit=limit
+        ))
+
+        # Convert ObjectId to string
+        for sub in submissions:
+            sub['_id'] = str(sub['_id'])
+            if sub.get('form_config_id'):
+                sub['form_config_id'] = str(sub['form_config_id'])
+            if sub.get('created_at'):
+                sub['created_at'] = sub['created_at'].isoformat()
+
+        session.close()
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "submissions": submissions,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "group_id": group_id,
+                "group_name": group.name,
+                "form_name": form_config.get('form_name')
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting group submissions: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
