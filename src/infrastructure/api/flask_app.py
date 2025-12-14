@@ -1,19 +1,41 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from flasgger import Swagger
-from ...infrastructure.config.settings import settings
+from ..config.settings import settings
+from ..persistence.mongodb_connection import mongodb
 from .middleware import validate_telegram_auth
 
 def create_app():
     app = Flask(__name__)
 
+    # Configure JWT
+    app.config['JWT_SECRET_KEY'] = settings.JWT_SECRET_KEY
+    app.config['JWT_ALGORITHM'] = settings.JWT_ALGORITHM
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = settings.JWT_ACCESS_TOKEN_EXPIRES
+    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = settings.JWT_REFRESH_TOKEN_EXPIRES
+
+    # Initialize JWT manager
+    jwt = JWTManager(app)
+
+    # Initialize MongoDB connection
+    try:
+        mongodb.connect()
+    except Exception as e:
+        app.logger.error(f"Failed to connect to MongoDB: {e}")
+
     # Register Telegram authentication middleware
     app.before_request(validate_telegram_auth)
+
+    # Get admin portal origins from settings
+    admin_origins = settings.get_cors_origins()
+    telegram_origins = ["https://web.telegram.org", "https://t.me"]
+    all_origins = telegram_origins + admin_origins
 
     # Configure CORS
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["https://web.telegram.org", "https://t.me"],
+            "origins": all_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -76,7 +98,9 @@ def create_app():
     # Register blueprints
     from .routes.checkin_routes import checkin_bp
     from .routes.employee_routes import employee_bp
+    from .routes.auth_routes import auth_bp
     app.register_blueprint(checkin_bp, url_prefix='/api')
     app.register_blueprint(employee_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp)  # auth_bp already has /api/auth prefix
 
     return app
