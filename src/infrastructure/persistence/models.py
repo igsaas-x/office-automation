@@ -9,6 +9,20 @@ Base = declarative_base()
 def utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
+class TelegramUserModel(Base):
+    __tablename__ = 'telegram_users'
+
+    id = Column(Integer, primary_key=True)
+    telegram_id = Column(String(255), unique=True, nullable=False)
+    username = Column(String(255), nullable=True)
+    first_name = Column(String(255), nullable=True)
+    last_name = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relationships
+    created_groups = relationship('GroupModel', back_populates='created_by_user', foreign_keys='GroupModel.created_by_user_id')
+
 class GroupModel(Base):
     __tablename__ = 'groups'
 
@@ -19,8 +33,14 @@ class GroupModel(Base):
     package_level = Column(String(20), nullable=False, default='free')  # free, basic, premium
     package_updated_at = Column(DateTime, nullable=True)  # When package was last updated
     package_updated_by = Column(String(255), nullable=True)  # Admin Telegram ID who updated
+
+    # Group creator/owner - FK to telegram_users
+    created_by_user_id = Column(Integer, ForeignKey('telegram_users.id'), nullable=True)
+
     created_at = Column(DateTime, default=utc_now)
 
+    # Relationships
+    created_by_user = relationship('TelegramUserModel', back_populates='created_groups', foreign_keys=[created_by_user_id])
     check_ins = relationship('CheckInModel', back_populates='group')
     employee_groups = relationship('EmployeeGroupModel', back_populates='group')
 

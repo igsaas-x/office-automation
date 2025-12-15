@@ -34,6 +34,10 @@ def list_all_groups():
         type: string
         description: Search by group name
       - in: query
+        name: username_search
+        type: string
+        description: Search by owner username
+      - in: query
         name: has_form
         type: boolean
         description: Filter by whether group has linked form
@@ -76,6 +80,21 @@ def list_all_groups():
                       created_at:
                         type: string
                         example: "2023-12-14T10:00:00"
+                      owner:
+                        type: object
+                        properties:
+                          telegram_id:
+                            type: string
+                            example: "123456789"
+                          username:
+                            type: string
+                            example: "john_doe"
+                          first_name:
+                            type: string
+                            example: "John"
+                          last_name:
+                            type: string
+                            example: "Doe"
                       has_form:
                         type: boolean
                         example: true

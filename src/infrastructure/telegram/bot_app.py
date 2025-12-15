@@ -229,6 +229,7 @@ class BotApplication:
         async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat = update.effective_chat
             message = update.effective_message
+            user = update.effective_user
 
             # Only works in group chats
             if chat.type not in ['group', 'supergroup']:
@@ -236,13 +237,17 @@ class BotApplication:
                     await message.reply_text("ពាក្យបញ្ជានេះដំណើរការតែនៅក្នុងការសន្ទនាក្រុមប៉ុណ្ណោះ។")
                 return
 
-            # Register the group
+            # Register the group with owner information
             session, _, _, _, group_repo, _, _, _, _ = self._get_repositories()
             register_group_use_case = RegisterGroupUseCase(group_repo)
 
             group = register_group_use_case.execute(
                 chat_id=str(chat.id),
-                name=chat.title or "ក្រុមមិនស្គាល់"
+                name=chat.title or "ក្រុមមិនស្គាល់",
+                created_by_telegram_id=str(user.id) if user else None,
+                created_by_username=user.username if user else None,
+                created_by_first_name=user.first_name if user else None,
+                created_by_last_name=user.last_name if user else None
             )
             session.close()
 

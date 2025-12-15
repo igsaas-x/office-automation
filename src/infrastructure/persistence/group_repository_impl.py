@@ -18,6 +18,10 @@ class GroupRepository(IGroupRepository):
             db_group.package_level = group.package_level
             db_group.package_updated_at = group.package_updated_at
             db_group.package_updated_by = group.package_updated_by
+            db_group.created_by_telegram_id = group.created_by_telegram_id
+            db_group.created_by_username = group.created_by_username
+            db_group.created_by_first_name = group.created_by_first_name
+            db_group.created_by_last_name = group.created_by_last_name
         else:
             # Create new
             db_group = GroupModel(
@@ -27,6 +31,10 @@ class GroupRepository(IGroupRepository):
                 package_level=group.package_level,
                 package_updated_at=group.package_updated_at,
                 package_updated_by=group.package_updated_by,
+                created_by_telegram_id=group.created_by_telegram_id,
+                created_by_username=group.created_by_username,
+                created_by_first_name=group.created_by_first_name,
+                created_by_last_name=group.created_by_last_name,
                 created_at=group.created_at
             )
             self.session.add(db_group)
@@ -57,5 +65,9 @@ class GroupRepository(IGroupRepository):
             package_level=model.package_level,
             package_updated_at=model.package_updated_at,
             package_updated_by=model.package_updated_by,
+            created_by_telegram_id=model.created_by_telegram_id,
+            created_by_username=model.created_by_username,
+            created_by_first_name=model.created_by_first_name,
+            created_by_last_name=model.created_by_last_name,
             created_at=model.created_at
         )
