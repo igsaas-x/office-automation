@@ -129,15 +129,22 @@ def list_all_groups():
         session = database.get_session()
         group_repo = GroupRepository(session)
 
-        # Get all groups from MySQL
-        # Note: GroupRepository doesn't have find_all method, so we query directly
-        from ...persistence.models import GroupModel
-        query = session.query(GroupModel)
+        # Get all groups from MySQL with user join
+        from ...persistence.models import GroupModel, TelegramUserModel
+        from sqlalchemy.orm import joinedload
+        query = session.query(GroupModel).outerjoin(
+            TelegramUserModel,
+            GroupModel.created_by_user_id == TelegramUserModel.id
+        )
 
-        # Search filter
+        # Search filters
         search = request.args.get('search')
         if search:
             query = query.filter(GroupModel.name.like(f'%{search}%'))
+
+        username_search = request.args.get('username_search')
+        if username_search:
+            query = query.filter(TelegramUserModel.username.like(f'%{username_search}%'))
 
         # Get total count
         total = query.count()
@@ -152,11 +159,22 @@ def list_all_groups():
         result_groups = []
 
         for group in groups:
+            # Add owner information
+            owner_info = None
+            if group.created_by_user:
+                owner_info = {
+                    'telegram_id': group.created_by_user.telegram_id,
+                    'username': group.created_by_user.username,
+                    'first_name': group.created_by_user.first_name,
+                    'last_name': group.created_by_user.last_name
+                }
+
             group_data = {
                 'id': group.id,
                 'chat_id': group.chat_id,
                 'name': group.name,
                 'created_at': group.created_at.isoformat() if group.created_at else None,
+                'owner': owner_info,
                 'has_form': False,
                 'form_info': None,
                 'submission_count': 0
@@ -290,14 +308,27 @@ def get_group_details(group_id):
     """
     try:
         session = database.get_session()
-        group_repo = GroupRepository(session)
 
-        # Get group from MySQL
-        group = group_repo.find_by_id(group_id)
+        # Get group from MySQL with user join
+        from ...persistence.models import GroupModel, TelegramUserModel
+        group = session.query(GroupModel).outerjoin(
+            TelegramUserModel,
+            GroupModel.created_by_user_id == TelegramUserModel.id
+        ).filter(GroupModel.id == group_id).first()
 
         if not group:
             session.close()
             return jsonify({"success": False, "error": "Group not found"}), 404
+
+        # Add owner information
+        owner_info = None
+        if group.created_by_user:
+            owner_info = {
+                'telegram_id': group.created_by_user.telegram_id,
+                'username': group.created_by_user.username,
+                'first_name': group.created_by_user.first_name,
+                'last_name': group.created_by_user.last_name
+            }
 
         # Convert to dict
         group_data = {
@@ -305,6 +336,7 @@ def get_group_details(group_id):
             'chat_id': group.chat_id,
             'name': group.name,
             'created_at': group.created_at.isoformat() if group.created_at else None,
+            'owner': owner_info,
             'has_form': False,
             'form_info': None,
             'submission_count': 0,

@@ -78,6 +78,7 @@ class BotApplication:
         session = database.get_session()
         from ...infrastructure.persistence.group_repository_impl import GroupRepository
         from ...infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
+        from ...infrastructure.persistence.telegram_user_repository_impl import TelegramUserRepository
 
         return (
             session,
@@ -88,7 +89,8 @@ class BotApplication:
             EmployeeGroupRepository(session),
             VehicleRepository(session),
             TripRepository(session),
-            FuelRecordRepository(session)
+            FuelRecordRepository(session),
+            TelegramUserRepository(session)
         )
 
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE, employee_name: str = None):
@@ -238,8 +240,8 @@ class BotApplication:
                 return
 
             # Register the group with owner information
-            session, _, _, _, group_repo, _, _, _, _ = self._get_repositories()
-            register_group_use_case = RegisterGroupUseCase(group_repo)
+            session, _, _, _, group_repo, _, _, _, _, user_repo = self._get_repositories()
+            register_group_use_case = RegisterGroupUseCase(group_repo, user_repo)
 
             group = register_group_use_case.execute(
                 chat_id=str(chat.id),
