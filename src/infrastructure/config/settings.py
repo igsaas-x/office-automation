@@ -21,7 +21,7 @@ class Settings:
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     # MongoDB configuration (for OpnForm integration)
-    MONGODB_URL: str = os.getenv('MONGODB_URL', 'mongodb://localhost:27017/')
+    MONGODB_URL: str = os.getenv('MONGODB_URL', 'MONGODB_URL=mongodb://rootUser:rootPassword@localhost:27017/')
     MONGODB_DATABASE: str = os.getenv('MONGODB_DATABASE', 'office_automation_forms')
     MONGODB_MAX_POOL_SIZE: int = int(os.getenv('MONGODB_MAX_POOL_SIZE', '10'))
 

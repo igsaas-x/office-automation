@@ -52,6 +52,9 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
+            
+            # Mongo
+            MONGODB_URL=mongodb://rootUser:rootPassword@localhost:27017/
 
             # Google Sheets Configuration
             BALANCE_SHEET_ID=${{ secrets.BALANCE_SHEET_ID }}
