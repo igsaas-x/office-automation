@@ -48,7 +48,7 @@ class Settings:
     TELEGRAM_AUTH_CACHE_TTL: int = int(os.getenv('TELEGRAM_AUTH_CACHE_TTL', '300'))  # 5 minutes
     TELEGRAM_RATE_LIMIT_PER_USER: int = int(os.getenv('TELEGRAM_RATE_LIMIT_PER_USER', '20'))
     TELEGRAM_RATE_LIMIT_WINDOW: int = int(os.getenv('TELEGRAM_RATE_LIMIT_WINDOW', '60'))  # seconds
-    TELEGRAM_AUTH_EXEMPT_PATHS: str = os.getenv('TELEGRAM_AUTH_EXEMPT_PATHS', '/health,/api-docs,/metrics,/api/auth,/api/webhooks')
+    TELEGRAM_AUTH_EXEMPT_PATHS: str = os.getenv('TELEGRAM_AUTH_EXEMPT_PATHS', '/health,/api-docs,/metrics,/api/auth,/api/admin,/api/webhooks')
 
     ADMIN_IDS: list[int] = []
 

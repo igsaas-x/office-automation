@@ -9,6 +9,7 @@ from flask import Blueprint, request, jsonify
 from ....infrastructure.persistence.database import database
 from ....infrastructure.persistence.group_repository_impl import GroupRepository
 from ....infrastructure.persistence.mongodb_connection import mongodb
+from ..middleware.jwt_auth import jwt_required_admin
 from bson import ObjectId
 import logging
 
@@ -18,6 +19,7 @@ admin_group_bp = Blueprint('admin_groups', __name__, url_prefix='/api/admin/grou
 
 
 @admin_group_bp.route('', methods=['GET'])
+@jwt_required_admin
 def list_all_groups():
     """
     List all groups from MySQL (admin view)
@@ -188,6 +190,7 @@ def list_all_groups():
 
 
 @admin_group_bp.route('/<int:group_id>', methods=['GET'])
+@jwt_required_admin
 def get_group_details(group_id):
     """
     Get group details from MySQL (admin view)
@@ -339,6 +342,7 @@ def get_group_details(group_id):
 
 
 @admin_group_bp.route('/stats', methods=['GET'])
+@jwt_required_admin
 def get_group_stats():
     """
     Get group statistics (admin dashboard)
@@ -423,6 +427,7 @@ def get_group_stats():
 
 
 @admin_group_bp.route('/<int:group_id>/form', methods=['POST'])
+@jwt_required_admin
 def link_form_to_group(group_id):
     """
     Link OpnForm to a group
@@ -574,6 +579,7 @@ def link_form_to_group(group_id):
 
 
 @admin_group_bp.route('/<int:group_id>/webhook', methods=['GET'])
+@jwt_required_admin
 def get_webhook_url(group_id):
     """
     Get webhook URL for receiving OpnForm submissions
@@ -668,6 +674,7 @@ def get_webhook_url(group_id):
 
 
 @admin_group_bp.route('/<int:group_id>/submissions', methods=['GET'])
+@jwt_required_admin
 def get_group_submissions(group_id):
     """
     Get form submissions for a group
