@@ -37,9 +37,12 @@ class Settings:
     CORS_ALLOWED_ORIGINS: str = os.getenv('CORS_ALLOWED_ORIGINS', '*')
 
     # OpnForm integration
-    OPNFORM_API_URL: str = os.getenv('OPNFORM_API_URL', 'https://api.opnform.com/api/v1')
+    # Default mirrors the expected request pattern:
+    # curl --request GET https://api.opnform.com/open/workspaces/<workspace_id>/forms \
+    #      --header 'Authorization: Bearer <token>' --header 'User-Agent: insomnia/12.1.0'
+    OPNFORM_API_URL: str = os.getenv('OPNFORM_API_URL', 'https://api.opnform.com/open')
     OPNFORM_WORKSPACE_ID: str = os.getenv('OPNFORM_WORKSPACE_ID', '12030')
-    OPNFORM_API_TOKEN: str = os.getenv('OPNFORM_API_TOKEN', 'w6mFkuHiNUQwD3O7YMDAYiESX3BhmPjln974vioUdfa1a34d')
+    OPNFORM_API_TOKEN: str = os.getenv('OPNFORM_API_TOKEN', '303|w6mFkuHiNUQwD3O7YMDAYiESX3BhmPjln974vioUdfa1a34d')
 
     # Google Sheets configuration
     BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')
