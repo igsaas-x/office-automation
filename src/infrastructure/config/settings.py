@@ -36,6 +36,11 @@ class Settings:
     ADMIN_PORTAL_URL: str = os.getenv('ADMIN_PORTAL_URL', 'http://localhost:3000')
     CORS_ALLOWED_ORIGINS: str = os.getenv('CORS_ALLOWED_ORIGINS', '*')
 
+    # OpnForm integration
+    OPNFORM_API_URL: str = os.getenv('OPNFORM_API_URL', 'https://api.opnform.com/api/v1')
+    OPNFORM_WORKSPACE_ID: str = os.getenv('OPNFORM_WORKSPACE_ID', '12030')
+    OPNFORM_API_TOKEN: str = os.getenv('OPNFORM_API_TOKEN', 'w6mFkuHiNUQwD3O7YMDAYiESX3BhmPjln974vioUdfa1a34d')
+
     # Google Sheets configuration
     BALANCE_SHEET_ID: str = os.getenv('BALANCE_SHEET_ID', '')
     BALANCE_SHEET_NAME: str = os.getenv('BALANCE_SHEET_NAME', 'October')

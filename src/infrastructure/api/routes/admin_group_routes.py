@@ -10,6 +10,7 @@ from ....infrastructure.persistence.database import database
 from ....infrastructure.persistence.group_repository_impl import GroupRepository
 from ....infrastructure.persistence.mongodb_connection import mongodb
 from ..middleware.jwt_auth import jwt_required_admin
+from ...external.opnform_client import opnform_client
 from bson import ObjectId
 import logging
 
@@ -474,6 +475,88 @@ def get_group_stats():
 
     except Exception as e:
         logger.error(f"Error getting group stats: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@admin_group_bp.route('/opnform/forms', methods=['GET'])
+@jwt_required_admin
+def list_opnform_forms():
+    """
+    List available OpnForm forms from workspace
+    ---
+    tags:
+      - Admin - Groups
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: List of available OpnForm forms
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: object
+              properties:
+                forms:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "opnform-123"
+                      title:
+                        type: string
+                        example: "Employee Registration Form"
+                      slug:
+                        type: string
+                        example: "employee-registration"
+                      is_published:
+                        type: boolean
+                        example: true
+                      created_at:
+                        type: string
+                        example: "2023-12-14T10:00:00"
+                      updated_at:
+                        type: string
+                        example: "2023-12-15T10:00:00"
+                total:
+                  type: integer
+                  example: 5
+      500:
+        description: Error fetching forms from OpnForm
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+              example: "Failed to fetch forms from OpnForm"
+    """
+    try:
+        forms = opnform_client.get_forms()
+
+        if forms is None:
+            return jsonify({
+                "success": False,
+                "error": "Failed to fetch forms from OpnForm. Please check your OpnForm credentials."
+            }), 500
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "forms": forms,
+                "total": len(forms)
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listing OpnForm forms: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
