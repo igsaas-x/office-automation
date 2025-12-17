@@ -103,7 +103,7 @@ class MongoDBConnection:
             # Form submissions indexes
             self._db.form_submissions.create_index([("customer_id", 1), ("created_at", -1)])
             self._db.form_submissions.create_index([("form_config_id", 1), ("created_at", -1)])
-            self._db.form_submissions.create_index("opnform_submission_id", unique=True)
+            self._db.form_submissions.create_index("opnform_submission_id", unique=True, sparse=True)
             self._db.form_submissions.create_index([("metadata.submitted_at", -1)])
             self._db.form_submissions.create_index("processing_status")
 
