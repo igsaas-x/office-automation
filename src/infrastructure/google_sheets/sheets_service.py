@@ -4,6 +4,9 @@ from datetime import datetime, timezone, timedelta
 from ..config.settings import settings
 
 class GoogleSheetsService:
+    LEDGER_HEADERS = ["No", "Date", "Item", "Amount (USD)", "Amount (KHR)"]
+    DEFAULT_LEDGER_START_COL = 8  # Column H to match existing sheet layout
+
     def __init__(self):
         self.credentials_file = 'credentials.json'
         self.client = None
@@ -145,17 +148,19 @@ class GoogleSheetsService:
         sheet = client.open_by_key(target_sheet_id)
 
         worksheet = self._get_or_create_month_sheet(sheet, sheet_title)
-        self._ensure_headers(worksheet)
+        header_row, start_col = self._ensure_headers(worksheet)
 
-        next_row = self._next_row_number(worksheet)
+        next_row = self._next_row_number(worksheet, start_col, header_row)
         row_index = next_row  # includes header row counting
-        next_no = self._next_sequence_number(worksheet)
+        next_no = self._next_sequence_number(worksheet, start_col, header_row)
 
         usd_value = amount if currency.upper() == "USD" or currency.upper() == "UNKNOWN" else ""
         khr_value = amount if currency.upper() == "KHR" else ""
 
         values = [[next_no, date_display, item, usd_value, khr_value]]
-        range_ref = f"A{row_index}:E{row_index}"
+        start_letter = self._col_to_letter(start_col)
+        end_letter = self._col_to_letter(start_col + len(values[0]) - 1)
+        range_ref = f"{start_letter}{row_index}:{end_letter}{row_index}"
         worksheet.update(range_ref, values, value_input_option="USER_ENTERED")
 
         return {"worksheet": sheet_title, "row": row_index, "sequence": next_no}
@@ -168,24 +173,60 @@ class GoogleSheetsService:
             return sheet.add_worksheet(title=sheet_title, rows="500", cols="10")
 
     def _ensure_headers(self, worksheet):
-        headers = ["No", "Date", "Item", "Amount (USD)", "Amount (KHR)"]
-        existing = worksheet.row_values(1)
-        if len(existing) >= len(headers):
-            return
-        worksheet.update("A1:E1", [headers])
+        """
+        Ensure ledger headers exist.
+        Returns (header_row_index, start_col_index).
+        """
+        found = self._find_header_position(worksheet)
+        if found:
+            return found
 
-    def _next_row_number(self, worksheet) -> int:
-        """Return the next row index (1-based) after the last non-empty row."""
-        col_values = worksheet.col_values(1)
-        if not col_values:
-            return 2  # header missing; will be added before use
-        return len(col_values) + 1
+        start_col = self.DEFAULT_LEDGER_START_COL
+        header_row = 1
+        start_letter = self._col_to_letter(start_col)
+        end_letter = self._col_to_letter(start_col + len(self.LEDGER_HEADERS) - 1)
+        worksheet.update(f"{start_letter}{header_row}:{end_letter}{header_row}", [self.LEDGER_HEADERS])
+        return header_row, start_col
 
-    def _next_sequence_number(self, worksheet) -> int:
+    def _find_header_position(self, worksheet):
+        """Search the first few rows for the header sequence."""
+        try:
+            grid = worksheet.get("A1:Z5")
+        except Exception:
+            return None
+
+        for row_idx, row in enumerate(grid, start=1):
+            for col_idx in range(0, len(row) - len(self.LEDGER_HEADERS) + 1):
+                segment = row[col_idx:col_idx + len(self.LEDGER_HEADERS)]
+                if segment == self.LEDGER_HEADERS:
+                    return row_idx, col_idx + 1  # 1-based column index
+        return None
+
+    def _next_row_number(self, worksheet, start_col: int, header_row: int) -> int:
+        """Return the next row index (1-based) after the last non-empty row for the target columns."""
+        all_values = worksheet.get_all_values()
+        end_col = start_col + len(self.LEDGER_HEADERS) - 1
+        last_row_with_data = header_row
+
+        for idx, row in enumerate(all_values, start=1):
+            if idx < header_row:
+                continue
+            extended = row + [""] * (end_col - len(row) + 1)
+            if any(cell.strip() for cell in extended[start_col - 1:end_col]):
+                last_row_with_data = idx
+
+        return last_row_with_data + 1
+
+    def _next_sequence_number(self, worksheet, start_col: int, header_row: int) -> int:
         """Return next sequence for 'No' column (ignoring header)."""
-        col_values = worksheet.col_values(1)
+        all_values = worksheet.get_all_values()
         numeric_values = []
-        for value in col_values[1:]:  # skip header
+        for idx, row in enumerate(all_values, start=1):
+            if idx <= header_row:
+                continue
+            if len(row) < start_col:
+                continue
+            value = row[start_col - 1]
             try:
                 numeric_values.append(int(value))
             except (TypeError, ValueError):
@@ -193,3 +234,11 @@ class GoogleSheetsService:
         if not numeric_values:
             return 1
         return max(numeric_values) + 1
+
+    def _col_to_letter(self, col: int) -> str:
+        """Convert 1-based column index to letter (1=A)."""
+        result = ""
+        while col > 0:
+            col, remainder = divmod(col - 1, 26)
+            result = chr(65 + remainder) + result
+        return result
