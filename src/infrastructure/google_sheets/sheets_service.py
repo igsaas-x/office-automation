@@ -118,3 +118,78 @@ class GoogleSheetsService:
             error_msg = str(e)
             # Don't use markdown in error messages to avoid parsing issues
             return f"Error reading balance summary: {error_msg}"
+
+    # New helpers for expense ledger appends
+    def append_expense_record(
+        self,
+        item: str,
+        amount: float,
+        currency: str,
+        sheet_id: str = None,
+        occurred_at: datetime = None
+    ) -> dict:
+        """
+        Append a single expense row into the current month sheet.
+
+        Returns a dict with sheet metadata (worksheet title, row number).
+        """
+        if amount is None or amount <= 0:
+            raise ValueError("Amount must be greater than zero")
+
+        local_time = occurred_at or datetime.now(timezone(timedelta(hours=7)))
+        sheet_title = local_time.strftime("%B")  # e.g., December
+        date_display = local_time.strftime("%b %d")  # e.g., Dec 03
+
+        target_sheet_id = sheet_id if sheet_id else settings.BALANCE_SHEET_ID
+        client = self._authenticate()
+        sheet = client.open_by_key(target_sheet_id)
+
+        worksheet = self._get_or_create_month_sheet(sheet, sheet_title)
+        self._ensure_headers(worksheet)
+
+        next_row = self._next_row_number(worksheet)
+        row_index = next_row  # includes header row counting
+        next_no = self._next_sequence_number(worksheet)
+
+        usd_value = amount if currency.upper() == "USD" or currency.upper() == "UNKNOWN" else ""
+        khr_value = amount if currency.upper() == "KHR" else ""
+
+        values = [[next_no, date_display, item, usd_value, khr_value]]
+        range_ref = f"A{row_index}:E{row_index}"
+        worksheet.update(range_ref, values, value_input_option="USER_ENTERED")
+
+        return {"worksheet": sheet_title, "row": row_index, "sequence": next_no}
+
+    def _get_or_create_month_sheet(self, sheet, sheet_title: str):
+        try:
+            return sheet.worksheet(sheet_title)
+        except Exception:
+            # Create with enough rows/cols for typical usage
+            return sheet.add_worksheet(title=sheet_title, rows="500", cols="10")
+
+    def _ensure_headers(self, worksheet):
+        headers = ["No", "Date", "Item", "Amount (USD)", "Amount (KHR)"]
+        existing = worksheet.row_values(1)
+        if len(existing) >= len(headers):
+            return
+        worksheet.update("A1:E1", [headers])
+
+    def _next_row_number(self, worksheet) -> int:
+        """Return the next row index (1-based) after the last non-empty row."""
+        col_values = worksheet.col_values(1)
+        if not col_values:
+            return 2  # header missing; will be added before use
+        return len(col_values) + 1
+
+    def _next_sequence_number(self, worksheet) -> int:
+        """Return next sequence for 'No' column (ignoring header)."""
+        col_values = worksheet.col_values(1)
+        numeric_values = []
+        for value in col_values[1:]:  # skip header
+            try:
+                numeric_values.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        if not numeric_values:
+            return 1
+        return max(numeric_values) + 1

@@ -4,11 +4,14 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 from ...infrastructure.config.settings import settings
 from ...infrastructure.google_sheets.sheets_service import GoogleSheetsService
 from ...application.use_cases.get_balance_summary import GetBalanceSummaryUseCase
 from ...presentation.handlers.balance_summary_handler import BalanceSummaryHandler
+from ...infrastructure.llm.expense_parser_client import ExpenseParserClient
 
 
 class BalanceBotApplication:
@@ -17,6 +20,14 @@ class BalanceBotApplication:
     def __init__(self):
         # Create application with balance bot token
         self.app = Application.builder().token(settings.BALANCE_BOT_TOKEN).build()
+
+        self.sheets_service = GoogleSheetsService()
+        self.expense_parser = ExpenseParserClient()
+        self.balance_summary_handler = BalanceSummaryHandler(
+            GetBalanceSummaryUseCase(self.sheets_service),
+            sheets_service=self.sheets_service,
+            expense_parser=self.expense_parser,
+        )
 
         # Setup handlers
         self._setup_handlers()
@@ -33,19 +44,11 @@ class BalanceBotApplication:
 
     async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /balance command - show month selection"""
-        sheets_service = GoogleSheetsService()
-        balance_summary_handler = BalanceSummaryHandler(
-            GetBalanceSummaryUseCase(sheets_service)
-        )
-        await balance_summary_handler.show_month_selection(update, context)
+        await self.balance_summary_handler.show_month_selection(update, context)
 
     async def balance_music_school_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /balance_music_school command - show month selection for music school"""
-        sheets_service = GoogleSheetsService()
-        balance_summary_handler = BalanceSummaryHandler(
-            GetBalanceSummaryUseCase(sheets_service)
-        )
-        await balance_summary_handler.show_month_selection(
+        await self.balance_summary_handler.show_month_selection(
             update,
             context,
             callback_prefix="MUSIC_SCHOOL_MONTH",
@@ -58,11 +61,7 @@ class BalanceBotApplication:
         # Extract month from callback_data (format: "BALANCE_MONTH_{month}")
         month = query.data.replace("BALANCE_MONTH_", "")
 
-        sheets_service = GoogleSheetsService()
-        balance_summary_handler = BalanceSummaryHandler(
-            GetBalanceSummaryUseCase(sheets_service)
-        )
-        await balance_summary_handler.show_balance_summary(update, context, month=month)
+        await self.balance_summary_handler.show_balance_summary(update, context, month=month)
 
     async def music_school_month_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle music school month selection callback"""
@@ -70,11 +69,7 @@ class BalanceBotApplication:
         # Extract month from callback_data (format: "MUSIC_SCHOOL_MONTH_{month}")
         month = query.data.replace("MUSIC_SCHOOL_MONTH_", "")
 
-        sheets_service = GoogleSheetsService()
-        balance_summary_handler = BalanceSummaryHandler(
-            GetBalanceSummaryUseCase(sheets_service)
-        )
-        await balance_summary_handler.show_balance_summary(
+        await self.balance_summary_handler.show_balance_summary(
             update,
             context,
             month=month,
@@ -84,11 +79,11 @@ class BalanceBotApplication:
 
     async def balance_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle balance button callback - show month selection"""
-        sheets_service = GoogleSheetsService()
-        balance_summary_handler = BalanceSummaryHandler(
-            GetBalanceSummaryUseCase(sheets_service)
-        )
-        await balance_summary_handler.show_month_selection(update, context)
+        await self.balance_summary_handler.show_month_selection(update, context)
+
+    async def group_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle group text for expense logging."""
+        await self.balance_summary_handler.handle_group_expense(update, context)
 
     def _setup_handlers(self):
         """Setup all handlers for the balance bot"""
@@ -101,6 +96,14 @@ class BalanceBotApplication:
         self.app.add_handler(CallbackQueryHandler(self.balance_month_callback, pattern="^BALANCE_MONTH_"))
         self.app.add_handler(CallbackQueryHandler(self.music_school_month_callback, pattern="^MUSIC_SCHOOL_MONTH_"))
         self.app.add_handler(CallbackQueryHandler(self.balance_callback, pattern="^BALANCE_SUMMARY$"))
+
+        # Group message listener for expenses
+        self.app.add_handler(
+            MessageHandler(
+                filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+                self.group_message_handler
+            )
+        )
 
     def run(self):
         """Start the bot"""
