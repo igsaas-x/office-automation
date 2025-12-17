@@ -5,8 +5,8 @@ from ...application.use_cases.get_balance_summary import GetBalanceSummaryUseCas
 class BalanceSummaryHandler:
     # List of months for selection
     MONTHS = [
-        "មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
-        "កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ"
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
     ]
 
     def __init__(self, get_balance_summary_use_case: GetBalanceSummaryUseCase):
