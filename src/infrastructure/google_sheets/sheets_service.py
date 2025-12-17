@@ -5,7 +5,7 @@ from ..config.settings import settings
 
 class GoogleSheetsService:
     LEDGER_HEADERS = ["No", "Date", "Item", "Amount (USD)", "Amount (KHR)"]
-    DEFAULT_LEDGER_START_COL = 8  # Column H to match existing sheet layout
+    DEFAULT_LEDGER_START_COL = 7  # Column G (Date will be column H)
 
     def __init__(self):
         self.credentials_file = 'credentials.json'
@@ -150,9 +150,9 @@ class GoogleSheetsService:
         worksheet = self._get_or_create_month_sheet(sheet, sheet_title)
         header_row, start_col = self._ensure_headers(worksheet)
 
-        next_row = self._next_row_number(worksheet, start_col, header_row)
-        row_index = next_row  # includes header row counting
-        next_no = self._next_sequence_number(worksheet, start_col, header_row)
+        # Find first empty row based on Date column (start_col + 1)
+        row_index = self._next_row_number(worksheet, start_col, header_row)
+        next_no = self._next_sequence_number(worksheet, start_col, header_row, row_index)
 
         usd_value = amount if currency.upper() == "USD" or currency.upper() == "UNKNOWN" else ""
         khr_value = amount if currency.upper() == "KHR" else ""
@@ -203,37 +203,35 @@ class GoogleSheetsService:
         return None
 
     def _next_row_number(self, worksheet, start_col: int, header_row: int) -> int:
-        """Return the next row index (1-based) after the last non-empty row for the target columns."""
+        """
+        Return the first empty row in the Date column (start_col + 1),
+        scanning from header_row+1 downward. This stops at the first blank cell.
+        """
         all_values = worksheet.get_all_values()
-        end_col = start_col + len(self.LEDGER_HEADERS) - 1
-        last_row_with_data = header_row
+        date_col_idx = start_col  # 0-based index for Date column
+        current_row = header_row + 1
+        while True:
+            row = all_values[current_row - 1] if current_row - 1 < len(all_values) else []
+            value = row[date_col_idx] if len(row) > date_col_idx else ""
+            if not str(value).strip():
+                return current_row
+            current_row += 1
 
-        for idx, row in enumerate(all_values, start=1):
-            if idx < header_row:
-                continue
-            extended = row + [""] * (end_col - len(row) + 1)
-            if any(cell.strip() for cell in extended[start_col - 1:end_col]):
-                last_row_with_data = idx
-
-        return last_row_with_data + 1
-
-    def _next_sequence_number(self, worksheet, start_col: int, header_row: int) -> int:
-        """Return next sequence for 'No' column (ignoring header)."""
+    def _next_sequence_number(self, worksheet, start_col: int, header_row: int, target_row: int) -> int:
+        """
+        Return next sequence for 'No' column (start_col) considering rows up to target_row-1.
+        """
         all_values = worksheet.get_all_values()
-        numeric_values = []
-        for idx, row in enumerate(all_values, start=1):
-            if idx <= header_row:
-                continue
-            if len(row) < start_col:
-                continue
-            value = row[start_col - 1]
+        no_col_idx = start_col - 1
+        last_no = 0
+        for idx in range(header_row + 1, target_row):
+            row = all_values[idx - 1] if idx - 1 < len(all_values) else []
+            value = row[no_col_idx] if len(row) > no_col_idx else ""
             try:
-                numeric_values.append(int(value))
+                last_no = max(last_no, int(value))
             except (TypeError, ValueError):
                 continue
-        if not numeric_values:
-            return 1
-        return max(numeric_values) + 1
+        return last_no + 1
 
     def _col_to_letter(self, col: int) -> str:
         """Convert 1-based column index to letter (1=A)."""
