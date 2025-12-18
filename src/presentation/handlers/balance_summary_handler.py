@@ -173,11 +173,12 @@ class BalanceSummaryHandler:
             pending_map.pop(key, None)
 
     def _has_number(self, text: str) -> bool:
-        return bool(re.search(r"[0-9\u17e0-\u17e9]", text or ""))
+        cleaned = self._strip_usernames(text)
+        return bool(re.search(r"[0-9\u17e0-\u17e9]", cleaned))
 
     def _extract_first_amount(self, text: str) -> float:
         """Best-effort amount extraction for user feedback."""
-        normalized = self._normalize_digits(text)
+        normalized = self._normalize_digits(self._strip_usernames(text))
         match = re.search(r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?", normalized)
         if not match:
             return None
@@ -186,11 +187,15 @@ class BalanceSummaryHandler:
         except ValueError:
             return None
 
+    def _strip_usernames(self, text: str) -> str:
+        """Remove telegram-style @usernames so digits inside handles are ignored."""
+        return re.sub(r"@[A-Za-z0-9_]+", "", text or "")
+
     def _normalize_digits(self, text: str) -> str:
         khmer_digits = "០១២៣៤៥៦៧៨៩"
         ascii_digits = "0123456789"
         translation = str.maketrans(khmer_digits, ascii_digits)
-        return text.translate(translation)
+        return (text or "").translate(translation)
 
     async def _save_with_purpose(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                  purpose: str, amount: float, currency: str, raw_text: str):
