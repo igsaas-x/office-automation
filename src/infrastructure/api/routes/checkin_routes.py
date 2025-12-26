@@ -6,9 +6,11 @@ from ....infrastructure.persistence.database import database
 from ....infrastructure.persistence.employee_repository_impl import EmployeeRepository
 from ....infrastructure.persistence.check_in_repository_impl import CheckInRepository
 from ....infrastructure.persistence.group_repository_impl import GroupRepository
+from ....infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
 from ....application.use_cases.record_check_in import RecordCheckInUseCase
 from ....application.use_cases.get_employee import GetEmployeeUseCase
 from ....application.use_cases.register_group import RegisterGroupUseCase
+from ....application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
 from ....application.dto.check_in_dto import CheckInRequest
 
 checkin_bp = Blueprint('checkin', __name__)
@@ -25,6 +27,7 @@ def get_repositories():
         EmployeeRepository(session),
         CheckInRepository(session),
         GroupRepository(session),
+        EmployeeGroupRepository(session),
         session
     )
 
@@ -155,7 +158,7 @@ def checkin():
             }), 400
 
         # Get repositories
-        employee_repo, check_in_repo, group_repo, session = get_repositories()
+        employee_repo, check_in_repo, group_repo, employee_group_repo, session = get_repositories()
 
         try:
             # Get or create employee
@@ -174,6 +177,14 @@ def checkin():
             group = register_group_use_case.execute(
                 chat_id=str(group_chat_id),
                 name=group_name
+            )
+
+            # Create employee-group association if it doesn't exist
+            # This automatically links the employee to this group on first check-in
+            add_employee_to_group_use_case = AddEmployeeToGroupUseCase(employee_group_repo)
+            add_employee_to_group_use_case.execute(
+                employee_id=employee.id,
+                group_id=group.id
             )
 
             # Handle photo upload

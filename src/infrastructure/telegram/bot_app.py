@@ -18,6 +18,10 @@ from ...application.use_cases.register_employee import RegisterEmployeeUseCase
 from ...application.use_cases.get_employee import GetEmployeeUseCase
 from ...application.use_cases.record_salary_advance import RecordSalaryAdvanceUseCase
 from ...presentation.handlers.employee_handler import EmployeeHandler, WAITING_EMPLOYEE_NAME
+from ...presentation.handlers.registration_handler import (
+    RegistrationHandler,
+    WAITING_FOR_BUSINESS_NAME
+)
 from ...presentation.handlers.salary_advance_handler import (
     SalaryAdvanceHandler,
     WAITING_EMPLOYEE_NAME_ADV,
@@ -92,6 +96,25 @@ class BotApplication:
             FuelRecordRepository(session),
             TelegramUserRepository(session)
         )
+
+    def _get_repositories_for_handlers(self):
+        """Get repository tuple unpacked specifically for handlers"""
+        (session, employee_repo, check_in_repo, salary_advance_repo,
+         group_repo, employee_group_repo, vehicle_repo, trip_repo,
+         fuel_repo, telegram_user_repo) = self._get_repositories()
+
+        return {
+            'session': session,
+            'employee_repo': employee_repo,
+            'check_in_repo': check_in_repo,
+            'salary_advance_repo': salary_advance_repo,
+            'group_repo': group_repo,
+            'employee_group_repo': employee_group_repo,
+            'vehicle_repo': vehicle_repo,
+            'trip_repo': trip_repo,
+            'fuel_repo': fuel_repo,
+            'telegram_user_repo': telegram_user_repo
+        }
 
     async def show_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE, employee_name: str = None):
         """Show main menu"""
@@ -205,57 +228,75 @@ class BotApplication:
             message = update.effective_message
             user = update.effective_user
 
-            # /menu only works in group chats
-            if chat.type == 'private':
-                if message:
-                    await message.reply_text(
-                        "នៅក្នុងការសន្ទនាឯកជន សូមប្រើ /start ជំនួសឱ្យ /menu។"
-                    )
-                return
+            # Get repositories
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            employee_repo = repos['employee_repo']
+            group_repo = repos['group_repo']
 
-            # Check if employee is registered
-            session, employee_repo, _, _, _, _, _, _, _ = self._get_repositories()
-            employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(str(user.id))
-            session.close()
+            try:
+                # For private chats, show vehicle logistics menu
+                if chat.type == 'private':
+                    # Check if employee is registered
+                    employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(str(user.id))
 
-            if not employee:
-                await message.reply_text(
-                    "សូមចុះឈ្មោះជាមុនសិនដោយចាប់ផ្តើមការសន្ទនាឯកជនជាមួយបូត និងប្រើ /start។"
+                    if not employee:
+                        await message.reply_text(
+                            "សូមចុះឈ្មោះជាមុនសិនដោយចាប់ផ្តើមការសន្ទនាឯកជនជាមួយបូត និងប្រើ /start។"
+                        )
+                        return
+
+                    # Show vehicle logistics menu (with check-in disabled)
+                    menu_handler = MenuHandler(check_in_enabled=False, group_repository=None)
+                    await menu_handler.show_menu(update, context)
+                    return
+
+                # For group chats, show menu with deep links
+                menu_handler = MenuHandler(check_in_enabled=True, group_repository=group_repo)
+                await menu_handler.show_menu(update, context)
+
+            finally:
+                session.close()
+
+        async def register_group_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Start the group registration conversation"""
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            telegram_user_repo = repos['telegram_user_repo']
+
+            try:
+                register_group_use_case = RegisterGroupUseCase(group_repo, telegram_user_repo)
+                registration_handler = RegistrationHandler(
+                    register_group_use_case,
+                    group_repo,
+                    telegram_user_repo
                 )
-                return
 
-            # Show menu using MenuHandler (with check-in disabled)
-            menu_handler = MenuHandler(check_in_enabled=False)
-            await menu_handler.show_menu(update, context)
+                return await registration_handler.register_command(update, context)
 
-        async def register_group_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            chat = update.effective_chat
-            message = update.effective_message
-            user = update.effective_user
+            finally:
+                session.close()
 
-            # Only works in group chats
-            if chat.type not in ['group', 'supergroup']:
-                if message:
-                    await message.reply_text("ពាក្យបញ្ជានេះដំណើរការតែនៅក្នុងការសន្ទនាក្រុមប៉ុណ្ណោះ។")
-                return
+        async def register_group_receive_name_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Receive business name and complete registration"""
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            telegram_user_repo = repos['telegram_user_repo']
 
-            # Register the group with owner information
-            session, _, _, _, group_repo, _, _, _, _, user_repo = self._get_repositories()
-            register_group_use_case = RegisterGroupUseCase(group_repo, user_repo)
+            try:
+                register_group_use_case = RegisterGroupUseCase(group_repo, telegram_user_repo)
+                registration_handler = RegistrationHandler(
+                    register_group_use_case,
+                    group_repo,
+                    telegram_user_repo
+                )
 
-            group = register_group_use_case.execute(
-                chat_id=str(chat.id),
-                name=chat.title or "ក្រុមមិនស្គាល់",
-                created_by_telegram_id=str(user.id) if user else None,
-                created_by_username=user.username if user else None,
-                created_by_first_name=user.first_name if user else None,
-                created_by_last_name=user.last_name if user else None
-            )
-            session.close()
+                return await registration_handler.receive_business_name(update, context)
 
-            await message.reply_text(
-                f"✅ ក្រុម '{group.name}' ត្រូវបានចុះឈ្មោះដោយជោគជ័យ!"
-            )
+            finally:
+                session.close()
 
         async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session, employee_repo, _, _, _, _, _, _, _ = self._get_repositories()
@@ -602,19 +643,40 @@ class BotApplication:
 
         async def back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle back to menu button"""
-            menu_handler = MenuHandler(check_in_enabled=False)
-            await menu_handler.show_menu(update, context)
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+
+            try:
+                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
+                await menu_handler.show_menu(update, context)
+            finally:
+                session.close()
 
         async def show_daily_operation_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle daily operation menu button"""
-            menu_handler = MenuHandler(check_in_enabled=False)
-            await menu_handler.show_daily_operation_menu(update, context)
-            return ConversationHandler.END
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+
+            try:
+                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
+                await menu_handler.show_daily_operation_menu(update, context)
+                return ConversationHandler.END
+            finally:
+                session.close()
 
         async def show_report_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle report menu button"""
-            menu_handler = MenuHandler(check_in_enabled=False)
-            await menu_handler.show_report_menu(update, context)
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+
+            try:
+                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
+                await menu_handler.show_report_menu(update, context)
+            finally:
+                session.close()
 
         async def cancel_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle cancel button from main menu"""
@@ -757,9 +819,22 @@ class BotApplication:
             fallbacks=[CommandHandler("cancel", self.cancel)],
         )
 
+        # Group registration conversation handler
+        group_registration_conv = ConversationHandler(
+            entry_points=[
+                CommandHandler("register", register_group_start_wrapper),
+            ],
+            states={
+                WAITING_FOR_BUSINESS_NAME: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, register_group_receive_name_wrapper)
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+        )
+
         # Add handlers
         self.app.add_handler(CommandHandler("menu", menu_wrapper))
-        self.app.add_handler(CommandHandler("register_group", register_group_wrapper))
+        self.app.add_handler(group_registration_conv)
         self.app.add_handler(registration_conv)
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
         self.app.add_handler(request_advance_handler)
