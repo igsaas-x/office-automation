@@ -184,7 +184,11 @@ def checkin():
 
             # Create employee-group association if it doesn't exist
             # This automatically links the employee to this group on first check-in
-            add_employee_to_group_use_case = AddEmployeeToGroupUseCase(employee_group_repo)
+            add_employee_to_group_use_case = AddEmployeeToGroupUseCase(
+                employee_group_repo,
+                employee_repo,
+                group_repo
+            )
             add_employee_to_group_use_case.execute(
                 employee_id=employee.id,
                 group_id=group.id
