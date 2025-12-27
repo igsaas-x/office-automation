@@ -252,6 +252,10 @@ def validate_telegram_auth():
     if not settings.TELEGRAM_AUTH_ENABLED:
         return None
 
+    # Skip authentication for OPTIONS requests (CORS preflight)
+    if request.method == 'OPTIONS':
+        return None
+
     # Check if path is exempt
     exempt_paths = get_exempt_paths()
     if any(request.path.startswith(path) for path in exempt_paths):
