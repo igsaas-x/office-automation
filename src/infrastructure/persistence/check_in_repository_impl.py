@@ -66,6 +66,18 @@ class CheckInRepository(ICheckInRepository):
 
         return [self._to_entity(db_check_in) for db_check_in in db_check_ins]
 
+    def find_by_group_and_datetime_range(self, group_id: int, start_datetime: datetime, end_datetime: datetime) -> List[CheckIn]:
+        """Find all check-ins for a group within a datetime range"""
+        db_check_ins = self.session.query(CheckInModel).filter(
+            and_(
+                CheckInModel.group_id == group_id,
+                CheckInModel.timestamp >= start_datetime,
+                CheckInModel.timestamp <= end_datetime
+            )
+        ).order_by(CheckInModel.timestamp.desc()).all()
+
+        return [self._to_entity(db_check_in) for db_check_in in db_check_ins]
+
     def _to_entity(self, model: CheckInModel) -> CheckIn:
         return CheckIn(
             id=model.id,

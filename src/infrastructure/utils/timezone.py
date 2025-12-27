@@ -82,3 +82,34 @@ def get_ict_today() -> date:
     """
     now_ict = datetime.now(ICT)
     return now_ict.date()
+
+
+def ict_date_to_utc_range(ict_date: date) -> tuple[datetime, datetime]:
+    """
+    Convert an ICT date to UTC datetime range (start and end of day)
+
+    Since the database stores timestamps in UTC, we need to convert
+    ICT dates to the equivalent UTC datetime range.
+
+    Example:
+        ICT date 2025-12-28
+        -> Start: 2025-12-27 17:00:00 UTC (2025-12-28 00:00:00 ICT)
+        -> End:   2025-12-28 16:59:59 UTC (2025-12-28 23:59:59 ICT)
+
+    Args:
+        ict_date: Date in ICT timezone
+
+    Returns:
+        Tuple of (start_datetime_utc, end_datetime_utc)
+    """
+    # Create start of day in ICT (00:00:00)
+    start_ict = datetime.combine(ict_date, datetime.min.time()).replace(tzinfo=ICT)
+
+    # Create end of day in ICT (23:59:59)
+    end_ict = datetime.combine(ict_date, datetime.max.time()).replace(tzinfo=ICT)
+
+    # Convert to UTC
+    start_utc = start_ict.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = end_ict.astimezone(timezone.utc).replace(tzinfo=None)
+
+    return start_utc, end_utc

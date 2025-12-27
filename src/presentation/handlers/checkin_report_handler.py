@@ -11,7 +11,7 @@ from ...domain.repositories.group_repository import IGroupRepository
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from ...domain.repositories.employee_repository import IEmployeeRepository
 from ...infrastructure.services.excel_export_service import ExcelExportService
-from ...infrastructure.utils.timezone import format_ict_time, get_ict_today
+from ...infrastructure.utils.timezone import format_ict_time, get_ict_today, ict_date_to_utc_range
 
 
 class CheckInReportHandler:
@@ -83,7 +83,8 @@ class CheckInReportHandler:
 
         # Get today's check-ins (using ICT timezone)
         today = get_ict_today()
-        check_ins = self.check_in_repository.find_by_group_and_date(group_id, today)
+        start_utc, end_utc = ict_date_to_utc_range(today)
+        check_ins = self.check_in_repository.find_by_group_and_datetime_range(group_id, start_utc, end_utc)
 
         # Format report
         report_text = self._format_daily_report(group, check_ins, today)
@@ -104,10 +105,15 @@ class CheckInReportHandler:
         # Get this month's check-ins (using ICT timezone)
         today = get_ict_today()
         start_of_month = today.replace(day=1)
-        check_ins = self.check_in_repository.find_by_group_and_date_range(
+
+        # Convert ICT date range to UTC datetime range
+        start_utc, _ = ict_date_to_utc_range(start_of_month)
+        _, end_utc = ict_date_to_utc_range(today)
+
+        check_ins = self.check_in_repository.find_by_group_and_datetime_range(
             group_id,
-            start_of_month,
-            today
+            start_utc,
+            end_utc
         )
 
         # Format report
@@ -282,10 +288,15 @@ class CheckInReportHandler:
             # Get this month's check-ins (using ICT timezone)
             today = get_ict_today()
             start_of_month = today.replace(day=1)
-            check_ins = self.check_in_repository.find_by_group_and_date_range(
+
+            # Convert ICT date range to UTC datetime range
+            start_utc, _ = ict_date_to_utc_range(start_of_month)
+            _, end_utc = ict_date_to_utc_range(today)
+
+            check_ins = self.check_in_repository.find_by_group_and_datetime_range(
                 group_id,
-                start_of_month,
-                today
+                start_utc,
+                end_utc
             )
 
             # Check if there's data to export
