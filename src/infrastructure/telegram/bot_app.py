@@ -693,6 +693,47 @@ class BotApplication:
             finally:
                 session.close()
 
+        async def menu_reports_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle Reports button from menu - show report selection"""
+            query = update.callback_query
+            await query.answer()
+
+            # Extract group_id from callback_data: "menu_reports_{group_id}"
+            group_id = int(query.data.split('_')[-1])
+
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            check_in_repo = repos['check_in_repo']
+            employee_repo = repos['employee_repo']
+
+            try:
+                # Get group
+                group = group_repo.find_by_id(group_id)
+                if not group:
+                    await query.edit_message_text("⚠️ Group not found.")
+                    return
+
+                # Show report type selection
+                keyboard = [
+                    [InlineKeyboardButton("📅 របាយការណ៍ថ្ងៃនេះ Today's Report", callback_data=f"report_daily_{group.id}")],
+                    [InlineKeyboardButton("📆 របាយការណ៍ខែនេះ Monthly Report", callback_data=f"report_monthly_{group.id}")],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data=f"back_to_main_menu_{group_id}")],
+                ]
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await query.edit_message_text(
+                    f"**{group.business_name or group.name}**\n\n"
+                    f"📊 **របាយការណ៍ការចុះឈ្មោះ Check-In Reports**\n\n"
+                    f"សូមជ្រើសរើសប្រភេទរបាយការណ៍:\n"
+                    f"Please select report type:",
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            finally:
+                session.close()
+
         async def report_daily_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle daily report callback"""
             query = update.callback_query
@@ -726,6 +767,52 @@ class BotApplication:
             try:
                 report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
                 await report_handler.show_monthly_report(update, context, group_id)
+            finally:
+                session.close()
+
+        async def back_to_main_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle back to main menu button"""
+            query = update.callback_query
+            await query.answer()
+
+            # Extract group_id from callback_data
+            group_id = int(query.data.split('_')[-1])
+
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+
+            try:
+                # Get group
+                group = group_repo.find_by_id(group_id)
+                if not group:
+                    await query.edit_message_text("⚠️ Group not found.")
+                    return
+
+                # Recreate the main menu
+                group_id_param = abs(int(group.chat_id))
+
+                checkin_link = f"https://t.me/office_automation_bot/checkin?startapp=group_{group_id_param}"
+                balance_link = f"https://t.me/office_automation_bot/balance?startapp=group_{group_id_param}"
+
+                keyboard = [
+                    [InlineKeyboardButton("✅ Check In", url=checkin_link)],
+                    [InlineKeyboardButton("💰 View Balance", url=balance_link)],
+                    [InlineKeyboardButton("📊 Reports", callback_data=f"menu_reports_{group.id}")],
+                ]
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                business_name = group.business_name or group.name
+                message_text = (
+                    f"**{business_name}**\n\n"
+                    f"Select an action below:\n"
+                    f"• **Check In** - Record your attendance with photo & location\n"
+                    f"• **View Balance** - See your salary balance and advances\n"
+                    f"• **My Reports** - View your attendance and payment history"
+                )
+
+                await query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='Markdown')
             finally:
                 session.close()
 
@@ -913,8 +1000,12 @@ class BotApplication:
         self.app.add_handler(CallbackQueryHandler(show_report_menu_wrapper, pattern="^menu_report$"))
 
         # Add report callback handlers
+        self.app.add_handler(CallbackQueryHandler(menu_reports_callback_wrapper, pattern="^menu_reports_"))
         self.app.add_handler(CallbackQueryHandler(report_daily_callback_wrapper, pattern="^report_daily_"))
         self.app.add_handler(CallbackQueryHandler(report_monthly_callback_wrapper, pattern="^report_monthly_"))
+
+        # Add navigation handlers
+        self.app.add_handler(CallbackQueryHandler(back_to_main_menu_wrapper, pattern="^back_to_main_menu_"))
 
         # Add cancel handlers
         self.app.add_handler(CallbackQueryHandler(cancel_menu_wrapper, pattern="^cancel_menu$"))

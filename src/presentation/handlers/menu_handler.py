@@ -80,13 +80,12 @@ class MenuHandler:
 
         checkin_link = f"https://t.me/office_automation_bot/checkin?startapp=group_{group_id_param}"
         balance_link = f"https://t.me/office_automation_bot/balance?startapp=group_{group_id_param}"
-        reports_link = f"https://t.me/office_automation_bot/reports?startapp=group_{group_id_param}"
 
         # Create inline keyboard with action buttons
         keyboard = [
             [InlineKeyboardButton("✅ Check In", url=checkin_link)],
             [InlineKeyboardButton("💰 View Balance", url=balance_link)],
-            [InlineKeyboardButton("📊 Reports", url=reports_link)],
+            [InlineKeyboardButton("📊 Reports", callback_data=f"menu_reports_{group.id}")],
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
