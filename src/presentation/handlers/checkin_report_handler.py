@@ -11,7 +11,7 @@ from ...domain.repositories.group_repository import IGroupRepository
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from ...domain.repositories.employee_repository import IEmployeeRepository
 from ...infrastructure.services.excel_export_service import ExcelExportService
-from ...infrastructure.utils.timezone import format_ict_time
+from ...infrastructure.utils.timezone import format_ict_time, get_ict_today
 
 
 class CheckInReportHandler:
@@ -81,8 +81,8 @@ class CheckInReportHandler:
             await query.edit_message_text("⚠️ Group not found.")
             return
 
-        # Get today's check-ins
-        today = date.today()
+        # Get today's check-ins (using ICT timezone)
+        today = get_ict_today()
         check_ins = self.check_in_repository.find_by_group_and_date(group_id, today)
 
         # Format report
@@ -101,8 +101,8 @@ class CheckInReportHandler:
             await query.edit_message_text("⚠️ Group not found.")
             return
 
-        # Get this month's check-ins
-        today = date.today()
+        # Get this month's check-ins (using ICT timezone)
+        today = get_ict_today()
         start_of_month = today.replace(day=1)
         check_ins = self.check_in_repository.find_by_group_and_date_range(
             group_id,
@@ -279,8 +279,8 @@ class CheckInReportHandler:
                 await query.edit_message_text("⚠️ Group not found.")
                 return
 
-            # Get this month's check-ins
-            today = date.today()
+            # Get this month's check-ins (using ICT timezone)
+            today = get_ict_today()
             start_of_month = today.replace(day=1)
             check_ins = self.check_in_repository.find_by_group_and_date_range(
                 group_id,

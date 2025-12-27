@@ -1,7 +1,7 @@
 """
 Timezone utilities for converting between UTC and ICT (Cambodia timezone)
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 
 # Cambodia uses Indochina Time (ICT) which is UTC+7
@@ -71,3 +71,14 @@ def format_ict_date(utc_datetime: datetime) -> str:
         Formatted date string in ICT timezone
     """
     return format_ict_datetime(utc_datetime, '%Y-%m-%d')
+
+
+def get_ict_today() -> date:
+    """
+    Get today's date in ICT timezone
+
+    Returns:
+        Today's date in ICT timezone
+    """
+    now_ict = datetime.now(ICT)
+    return now_ict.date()
