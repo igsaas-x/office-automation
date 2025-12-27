@@ -25,12 +25,19 @@ class AddEmployeeToGroupUseCase:
         if not group:
             raise ValueError("Group not found")
 
-        # Check if employee already in group
-        if not self.employee_group_repository.exists(employee_id, group_id):
-            # Create association
-            employee_group = EmployeeGroup.create(
-                employee_id=employee_id,
-                group_id=group_id
+        # Return existing association if present
+        if self.employee_group_repository.exists(employee_id, group_id):
+            existing = self.employee_group_repository.find_by_employee_and_group(
+                employee_id,
+                group_id
             )
+            if existing:
+                return existing
+
+        # Create association
+        employee_group = EmployeeGroup.create(
+            employee_id=employee_id,
+            group_id=group_id
+        )
 
         return self.employee_group_repository.save(employee_group)

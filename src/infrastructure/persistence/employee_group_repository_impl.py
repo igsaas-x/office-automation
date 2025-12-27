@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from ...domain.entities.employee_group import EmployeeGroup
 from ...domain.repositories.employee_group_repository import IEmployeeGroupRepository
@@ -37,6 +37,13 @@ class EmployeeGroupRepository(IEmployeeGroupRepository):
             employee_id=employee_id,
             group_id=group_id
         ).first() is not None
+
+    def find_by_employee_and_group(self, employee_id: int, group_id: int) -> Optional[EmployeeGroup]:
+        db_employee_group = self.session.query(EmployeeGroupModel).filter_by(
+            employee_id=employee_id,
+            group_id=group_id
+        ).first()
+        return self._to_entity(db_employee_group) if db_employee_group else None
 
     def _to_entity(self, model: EmployeeGroupModel) -> EmployeeGroup:
         return EmployeeGroup(

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from ..entities.employee_group import EmployeeGroup
 
 class IEmployeeGroupRepository(ABC):
@@ -17,4 +17,8 @@ class IEmployeeGroupRepository(ABC):
 
     @abstractmethod
     def exists(self, employee_id: int, group_id: int) -> bool:
+        pass
+
+    @abstractmethod
+    def find_by_employee_and_group(self, employee_id: int, group_id: int) -> Optional[EmployeeGroup]:
         pass
