@@ -219,6 +219,7 @@ class BotApplication:
         menu_reports_callback_wrapper = menu_wrappers['menu_reports_callback_wrapper']
         report_daily_callback_wrapper = menu_wrappers['report_daily_callback_wrapper']
         report_monthly_callback_wrapper = menu_wrappers['report_monthly_callback_wrapper']
+        export_monthly_excel_callback_wrapper = menu_wrappers['export_monthly_excel_callback_wrapper']
         back_to_main_menu_wrapper = menu_wrappers['back_to_main_menu_wrapper']
         back_to_menu_wrapper = menu_wrappers['back_to_menu_wrapper']
         show_daily_operation_menu_wrapper = menu_wrappers['show_daily_operation_menu_wrapper']
@@ -417,7 +418,10 @@ class BotApplication:
         self.app.add_handler(CallbackQueryHandler(show_daily_report_wrapper, pattern="^report_daily$"))
         self.app.add_handler(CallbackQueryHandler(show_monthly_report_wrapper, pattern="^report_monthly$"))
 
-        # Add export placeholder handlers
+        # Add export handlers (specific patterns first)
+        self.app.add_handler(CallbackQueryHandler(export_monthly_excel_callback_wrapper, pattern="^export_monthly_excel_"))
+
+        # Add export placeholder handlers for other export types
         self.app.add_handler(CallbackQueryHandler(export_placeholder_wrapper, pattern="^export_.*"))
 
         # Add back to menu handler

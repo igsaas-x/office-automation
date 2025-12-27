@@ -6,9 +6,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from datetime import datetime, date, timedelta
 from typing import List
+import os
 from ...domain.repositories.group_repository import IGroupRepository
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from ...domain.repositories.employee_repository import IEmployeeRepository
+from ...infrastructure.services.excel_export_service import ExcelExportService
 
 
 class CheckInReportHandler:
@@ -18,11 +20,13 @@ class CheckInReportHandler:
         self,
         group_repository: IGroupRepository,
         check_in_repository: ICheckInRepository,
-        employee_repository: IEmployeeRepository
+        employee_repository: IEmployeeRepository,
+        excel_export_service: ExcelExportService
     ):
         self.group_repository = group_repository
         self.check_in_repository = check_in_repository
         self.employee_repository = employee_repository
+        self.excel_export_service = excel_export_service
 
     async def show_report_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show report type selection menu"""
@@ -108,7 +112,17 @@ class CheckInReportHandler:
         # Format report
         report_text = self._format_monthly_report(group, check_ins, today)
 
-        await query.edit_message_text(report_text, parse_mode='HTML')
+        # Add export button
+        keyboard = [
+            [InlineKeyboardButton(
+                "📥 ទាញយករបាយការណ៍ Excel / Download Excel Report",
+                callback_data=f"export_monthly_excel_{group.id}"
+            )],
+            [InlineKeyboardButton("🔙 ត្រលប់ក្រោយ Back", callback_data="menu_reports")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(report_text, reply_markup=reply_markup, parse_mode='HTML')
 
     def _format_daily_report(self, group, check_ins, report_date) -> str:
         """Format daily check-in report as a table"""
@@ -236,3 +250,110 @@ class CheckInReportHandler:
             )
 
         return "\n".join(report_lines)
+
+    async def export_monthly_report_excel(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        group_id: int
+    ):
+        """Export monthly check-in report as Excel file"""
+        query = update.callback_query
+        await query.answer()
+
+        try:
+            # Notify user that generation is in progress
+            await query.edit_message_text(
+                "⏳ កំពុងបង្កើតរបាយការណ៍ Excel...\n"
+                "Generating Excel report...",
+                parse_mode='HTML'
+            )
+
+            # Get group and validate
+            group = self.group_repository.find_by_id(group_id)
+            if not group:
+                await query.edit_message_text("⚠️ Group not found.")
+                return
+
+            # Get this month's check-ins
+            today = date.today()
+            start_of_month = today.replace(day=1)
+            check_ins = self.check_in_repository.find_by_group_and_date_range(
+                group_id,
+                start_of_month,
+                today
+            )
+
+            # Check if there's data to export
+            if not check_ins:
+                await query.edit_message_text(
+                    "ℹ️ មិនមានទិន្នន័យដើម្បីនាំចេញទេ។\n"
+                    "No check-ins data to export for this month.",
+                    parse_mode='HTML'
+                )
+                return
+
+            # Build employees dictionary
+            employees = {}
+            for checkin in check_ins:
+                if checkin.employee_id not in employees:
+                    employee = self.employee_repository.find_by_id(checkin.employee_id)
+                    if employee:
+                        employees[checkin.employee_id] = employee
+
+            # Generate Excel file
+            filepath = self.excel_export_service.generate_checkin_report(
+                check_ins=check_ins,
+                employees=employees,
+                group=group,
+                month=today.month,
+                year=today.year
+            )
+
+            # Update message before sending
+            await query.edit_message_text(
+                "📤 កំពុងផ្ញើរបាយការណ៍...\n"
+                "Sending report...",
+                parse_mode='HTML'
+            )
+
+            # Send Excel file
+            with open(filepath, 'rb') as excel_file:
+                business_name = group.business_name or group.name
+                month_year = today.strftime("%B %Y")
+                caption = (
+                    f"📊 <b>របាយការណ៍ការចុះឈ្មោះប្រចាំខែ</b>\n"
+                    f"<b>Monthly Check-In Report</b>\n\n"
+                    f"🏢 {business_name}\n"
+                    f"📅 {month_year}\n"
+                    f"👥 {len(employees)} employees\n"
+                    f"✅ {len(check_ins)} check-ins"
+                )
+                await query.message.reply_document(
+                    document=excel_file,
+                    caption=caption,
+                    parse_mode='HTML',
+                    filename=f"checkin_report_{month_year.replace(' ', '_')}.xlsx"
+                )
+
+            # Delete the message with "Sending..." text
+            await query.delete_message()
+
+        except Exception as e:
+            # Handle errors
+            error_message = (
+                "❌ បរាជ័យក្នុងការបង្កើតរបាយការណ៍។\n"
+                "Failed to generate report.\n\n"
+                f"Error: {str(e)}"
+            )
+            await query.edit_message_text(error_message, parse_mode='HTML')
+            raise
+
+        finally:
+            # Clean up: delete the temporary file
+            try:
+                if 'filepath' in locals() and os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception as cleanup_error:
+                # Log but don't fail if cleanup fails
+                print(f"Failed to delete temp file {filepath}: {cleanup_error}")

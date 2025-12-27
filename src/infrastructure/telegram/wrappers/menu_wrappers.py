@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 from ....presentation.handlers.menu_handler import MenuHandler
 from ....presentation.handlers.checkin_report_handler import CheckInReportHandler
 from ....application.use_cases.get_employee import GetEmployeeUseCase
+from ....infrastructure.services.excel_export_service import ExcelExportService
 
 
 def create_menu_wrappers(get_repositories_func):
@@ -65,7 +66,8 @@ def create_menu_wrappers(get_repositories_func):
         employee_repo = repos['employee_repo']
 
         try:
-            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+            excel_export_service = ExcelExportService()
+            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo, excel_export_service)
             await report_handler.show_report_menu(update, context)
         finally:
             session.close()
@@ -121,7 +123,8 @@ def create_menu_wrappers(get_repositories_func):
         employee_repo = repos['employee_repo']
 
         try:
-            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+            excel_export_service = ExcelExportService()
+            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo, excel_export_service)
             await report_handler.show_daily_report(update, context, group_id)
         finally:
             session.close()
@@ -138,8 +141,27 @@ def create_menu_wrappers(get_repositories_func):
         employee_repo = repos['employee_repo']
 
         try:
-            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+            excel_export_service = ExcelExportService()
+            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo, excel_export_service)
             await report_handler.show_monthly_report(update, context, group_id)
+        finally:
+            session.close()
+
+    async def export_monthly_excel_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle monthly Excel export callback"""
+        query = update.callback_query
+        group_id = int(query.data.split('_')[-1])
+
+        repos = get_repositories_func()
+        session = repos['session']
+        group_repo = repos['group_repo']
+        check_in_repo = repos['check_in_repo']
+        employee_repo = repos['employee_repo']
+
+        try:
+            excel_export_service = ExcelExportService()
+            report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo, excel_export_service)
+            await report_handler.export_monthly_report_excel(update, context, group_id)
         finally:
             session.close()
 
@@ -238,6 +260,7 @@ def create_menu_wrappers(get_repositories_func):
         'menu_reports_callback_wrapper': menu_reports_callback_wrapper,
         'report_daily_callback_wrapper': report_daily_callback_wrapper,
         'report_monthly_callback_wrapper': report_monthly_callback_wrapper,
+        'export_monthly_excel_callback_wrapper': export_monthly_excel_callback_wrapper,
         'back_to_main_menu_wrapper': back_to_main_menu_wrapper,
         'back_to_menu_wrapper': back_to_menu_wrapper,
         'show_daily_operation_menu_wrapper': show_daily_operation_menu_wrapper,
