@@ -14,23 +14,14 @@ from ...infrastructure.persistence.database import database
 from ...infrastructure.persistence.employee_repository_impl import EmployeeRepository
 from ...infrastructure.persistence.check_in_repository_impl import CheckInRepository
 from ...infrastructure.persistence.salary_advance_repository_impl import SalaryAdvanceRepository
-from ...application.use_cases.register_employee import RegisterEmployeeUseCase
-from ...application.use_cases.get_employee import GetEmployeeUseCase
-from ...application.use_cases.record_salary_advance import RecordSalaryAdvanceUseCase
-from ...presentation.handlers.employee_handler import EmployeeHandler, WAITING_EMPLOYEE_NAME
-from ...presentation.handlers.registration_handler import (
-    RegistrationHandler,
-    WAITING_FOR_BUSINESS_NAME
-)
-from ...presentation.handlers.checkin_report_handler import CheckInReportHandler
+from ...presentation.handlers.employee_handler import WAITING_EMPLOYEE_NAME
+from ...presentation.handlers.registration_handler import WAITING_FOR_BUSINESS_NAME
 from ...presentation.handlers.salary_advance_handler import (
-    SalaryAdvanceHandler,
     WAITING_EMPLOYEE_NAME_ADV,
     WAITING_ADVANCE_AMOUNT,
     WAITING_ADVANCE_NOTE
 )
 from ...presentation.handlers.setup_handler import (
-    SetupHandler,
     SETUP_MENU,
     SETUP_VEHICLE_PLATE,
     SETUP_VEHICLE_DRIVER,
@@ -39,9 +30,7 @@ from ...presentation.handlers.setup_handler import (
     SETUP_DRIVER_PHONE,
     SETUP_DRIVER_VEHICLE
 )
-from ...presentation.handlers.menu_handler import MenuHandler
 from ...presentation.handlers.vehicle_operations_handler import (
-    VehicleOperationsHandler,
     SELECT_VEHICLE_FOR_TRIP,
     ENTER_TRIP_COUNT,
     ENTER_TOTAL_LOADING_SIZE,
@@ -50,21 +39,20 @@ from ...presentation.handlers.vehicle_operations_handler import (
     ENTER_FUEL_COST,
     UPLOAD_FUEL_RECEIPT
 )
-from ...presentation.handlers.report_handler import (
-    ReportHandler,
-    SELECT_VEHICLE_FOR_PERFORMANCE
-)
+from ...presentation.handlers.report_handler import SELECT_VEHICLE_FOR_PERFORMANCE
 from ...infrastructure.persistence.vehicle_repository_impl import VehicleRepository
 from ...infrastructure.persistence.trip_repository_impl import TripRepository
 from ...infrastructure.persistence.fuel_record_repository_impl import FuelRecordRepository
-from ...application.use_cases.register_vehicle import RegisterVehicleUseCase
-from ...application.use_cases.register_group import RegisterGroupUseCase
-from ...application.use_cases.delete_vehicle import DeleteVehicleUseCase
-from ...application.use_cases.record_trip import RecordTripUseCase
-from ...application.use_cases.record_fuel import RecordFuelUseCase
-from ...application.use_cases.get_daily_report import GetDailyReportUseCase
-from ...application.use_cases.get_monthly_report import GetMonthlyReportUseCase
-from ...application.use_cases.get_vehicle_performance import GetVehiclePerformanceUseCase
+
+# Import wrapper modules
+from .wrappers.employee_wrappers import create_employee_wrappers
+from .wrappers.salary_wrappers import create_salary_wrappers
+from .wrappers.registration_wrappers import create_registration_wrappers
+from .wrappers.menu_wrappers import create_menu_wrappers
+from .wrappers.setup_wrappers import create_setup_wrappers
+from .wrappers.vehicle_operations_wrappers import create_vehicle_operations_wrappers
+from .wrappers.report_wrappers import create_report_wrappers
+
 
 class BotApplication:
     def __init__(self):
@@ -203,631 +191,71 @@ class BotApplication:
 
     def _setup_handlers(self):
         """Setup all conversation handlers"""
-
-        # Employee handlers
-        async def start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            chat = update.effective_chat
-
-            session, employee_repo, _, _, _, _, _, _, _ = self._get_repositories()
-            employee_handler = EmployeeHandler(
-                RegisterEmployeeUseCase(employee_repo),
-                GetEmployeeUseCase(employee_repo)
-            )
-
-            # Create a wrapper for show_menu that skips in groups
-            async def show_menu_or_skip(update, context, employee_name=None):
-                if chat.type in ['group', 'supergroup']:
-                    session.close()
-                    return
-                await self.show_menu(update, context, employee_name)
-                session.close()
-
-            return await employee_handler.start(update, context, show_menu_or_skip)
-
-        async def menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            chat = update.effective_chat
-            message = update.effective_message
-            user = update.effective_user
-
-            # Get repositories
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            employee_repo = repos['employee_repo']
-            group_repo = repos['group_repo']
-
-            try:
-                # For private chats, show vehicle logistics menu
-                if chat.type == 'private':
-                    # Check if employee is registered
-                    employee = GetEmployeeUseCase(employee_repo).execute_by_telegram_id(str(user.id))
-
-                    if not employee:
-                        await message.reply_text(
-                            "សូមចុះឈ្មោះជាមុនសិនដោយចាប់ផ្តើមការសន្ទនាឯកជនជាមួយបូត និងប្រើ /start។"
-                        )
-                        return
-
-                    # Show vehicle logistics menu (with check-in disabled)
-                    menu_handler = MenuHandler(check_in_enabled=False, group_repository=None)
-                    await menu_handler.show_menu(update, context)
-                    return
-
-                # For group chats, show menu with deep links
-                menu_handler = MenuHandler(check_in_enabled=True, group_repository=group_repo)
-                await menu_handler.show_menu(update, context)
-
-            finally:
-                session.close()
-
-        async def register_group_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Start the group registration conversation"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            telegram_user_repo = repos['telegram_user_repo']
-
-            try:
-                register_group_use_case = RegisterGroupUseCase(group_repo, telegram_user_repo)
-                registration_handler = RegistrationHandler(
-                    register_group_use_case,
-                    group_repo,
-                    telegram_user_repo
-                )
-
-                return await registration_handler.register_command(update, context)
-
-            finally:
-                session.close()
-
-        async def register_group_receive_name_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Receive business name and complete registration"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            telegram_user_repo = repos['telegram_user_repo']
-
-            try:
-                register_group_use_case = RegisterGroupUseCase(group_repo, telegram_user_repo)
-                registration_handler = RegistrationHandler(
-                    register_group_use_case,
-                    group_repo,
-                    telegram_user_repo
-                )
-
-                return await registration_handler.receive_business_name(update, context)
-
-            finally:
-                session.close()
-
-        async def register_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, _, _, _, _, _, _ = self._get_repositories()
-            employee_handler = EmployeeHandler(
-                RegisterEmployeeUseCase(employee_repo),
-                GetEmployeeUseCase(employee_repo)
-            )
-
-            chat = update.effective_chat
-
-            # In groups, don't show menu
-            if chat.type in ['group', 'supergroup']:
-                async def skip_menu(update, context, employee_name=None):
-                    session.close()
-                result = await employee_handler.register(update, context, skip_menu)
-                return result
-            else:
-                result = await employee_handler.register(update, context, self.show_menu)
-                session.close()
-                return result
-
-        async def register_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, _, _, _, _, _, _ = self._get_repositories()
-            employee_handler = EmployeeHandler(
-                RegisterEmployeeUseCase(employee_repo),
-                GetEmployeeUseCase(employee_repo)
-            )
-
-            # In groups, don't show menu after registration
-            async def skip_menu(update, context, employee_name=None):
-                session.close()
-
-            return await employee_handler.start(update, context, skip_menu)
-
-        async def request_advance_placeholder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            query = update.callback_query
-            if query:
-                await query.answer()
-                await query.edit_message_reply_markup(reply_markup=None)
-                context.chat_data['menu_message_id'] = query.message.message_id
-
-            message = update.effective_message
-            await message.reply_text("មុខងារស្នើសុំបុរេនឹងមកដល់ឆាប់ៗនេះ។")
-            await self.show_menu(update, context)
-
-        # Salary advance handlers
-        async def salary_advance_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, salary_advance_repo, _, _, _, _, _ = self._get_repositories()
-            salary_advance_handler = SalaryAdvanceHandler(
-                RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
-            )
-            if update.callback_query:
-                await update.callback_query.answer()
-                await update.callback_query.edit_message_reply_markup(reply_markup=None)
-                context.chat_data['menu_message_id'] = update.callback_query.message.message_id
-            result = await salary_advance_handler.start(update, context)
-            session.close()
-            return result
-
-        async def salary_advance_amount_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, salary_advance_repo, _, _, _, _, _ = self._get_repositories()
-            salary_advance_handler = SalaryAdvanceHandler(
-                RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
-            )
-            result = await salary_advance_handler.get_amount(update, context)
-            session.close()
-            return result
-
-        async def salary_advance_note_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, salary_advance_repo, _, _, _, _, _ = self._get_repositories()
-            salary_advance_handler = SalaryAdvanceHandler(
-                RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
-            )
-            result = await salary_advance_handler.get_note(update, context)
-            session.close()
-            return result
-
-        async def salary_advance_save_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, employee_repo, _, salary_advance_repo, _, _, _, _, _ = self._get_repositories()
-            salary_advance_handler = SalaryAdvanceHandler(
-                RecordSalaryAdvanceUseCase(salary_advance_repo, employee_repo)
-            )
-            result = await salary_advance_handler.save(update, context, self.show_menu)
-            session.close()
-            return result
-
-        # ==================== Vehicle Logistics Handlers ====================
-
-        # Setup handlers
-        def build_setup_handler(include_group: bool = False):
-            session, _, _, _, group_repo, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            setup_handler = SetupHandler(
-                RegisterVehicleUseCase(vehicle_repo),
-                None,  # RegisterDriverUseCase - driver functionality removed
-                RegisterGroupUseCase(group_repo) if include_group else None,
-                vehicle_repo,
-                None,  # driver_repo - driver functionality removed
-                DeleteVehicleUseCase(vehicle_repo, trip_repo, fuel_repo),
-                None  # DeleteDriverUseCase - driver functionality removed
-            )
-            return session, setup_handler
-
-        async def setup_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler(include_group=True)
-            result = await setup_handler.setup_menu(update, context)
-            session.close()
-            return result
-
-        async def setup_vehicle_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.start_vehicle_setup(update, context)
-            session.close()
-            return result
-
-        async def setup_vehicle_plate_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_vehicle_plate(update, context)
-            session.close()
-            return result
-
-        async def setup_vehicle_driver_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_vehicle_driver_name(update, context)
-            session.close()
-            return result
-
-        async def setup_driver_start_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.start_driver_setup(update, context)
-            session.close()
-            return result
-
-        async def setup_driver_name_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_driver_name(update, context)
-            session.close()
-            return result
-
-        async def setup_driver_role_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_driver_role(update, context)
-            session.close()
-            return result
-
-        async def setup_driver_phone_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_driver_phone(update, context)
-            session.close()
-            return result
-
-        async def setup_driver_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.receive_driver_vehicle(update, context)
-            session.close()
-            return result
-
-        async def setup_list_vehicles_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.list_vehicles(update, context)
-            session.close()
-            return result
-
-        async def setup_list_drivers_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.list_drivers(update, context)
-            session.close()
-            return result
-
-        async def setup_delete_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.delete_vehicle(update, context)
-            session.close()
-            return result
-
-        async def setup_delete_driver_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler()
-            result = await setup_handler.delete_driver(update, context)
-            session.close()
-            return result
-
-        async def setup_back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, setup_handler = build_setup_handler(include_group=True)
-            result = await setup_handler.back_to_setup_menu(update, context)
-            session.close()
-            return result
-
-        # Vehicle operations handlers
-        async def start_trip_recording_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo),
-                RecordFuelUseCase(None, vehicle_repo),  # fuel_repo passed later
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.start_trip_recording(update, context)
-            session.close()
-            return result
-
-        async def select_trip_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo),
-                RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.select_trip_vehicle(update, context)
-            session.close()
-            return result
-
-        async def receive_trip_count_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo),
-                RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.receive_trip_count(update, context)
-            session.close()
-            return result
-
-        async def receive_total_loading_size_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(trip_repo, vehicle_repo),
-                RecordFuelUseCase(None, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.receive_total_loading_size(update, context)
-            session.close()
-            return result
-
-        async def start_fuel_recording_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo),
-                RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.start_fuel_recording(update, context)
-            session.close()
-            return result
-
-        async def select_fuel_vehicle_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo),
-                RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.select_fuel_vehicle(update, context)
-            session.close()
-            return result
-
-        async def receive_fuel_liters_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo),
-                RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.receive_fuel_liters(update, context)
-            session.close()
-            return result
-
-        async def receive_fuel_cost_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo),
-                RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.receive_fuel_cost(update, context)
-            session.close()
-            return result
-
-        async def complete_fuel_record_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            vehicle_ops_handler = VehicleOperationsHandler(
-                RecordTripUseCase(None, vehicle_repo),
-                RecordFuelUseCase(fuel_repo, vehicle_repo),
-                vehicle_repo
-            )
-            result = await vehicle_ops_handler.complete_fuel_record(update, context)
-            session.close()
-            return result
-
-        # Report handlers
-        async def show_daily_report_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            report_handler = ReportHandler(
-                GetDailyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetMonthlyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetVehiclePerformanceUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                vehicle_repo, None
-            )
-            await report_handler.show_daily_report(update, context)
-            session.close()
-
-        async def show_monthly_report_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            report_handler = ReportHandler(
-                GetDailyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetMonthlyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetVehiclePerformanceUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                vehicle_repo, None
-            )
-            await report_handler.show_monthly_report(update, context)
-            session.close()
-
-        async def start_vehicle_performance_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            report_handler = ReportHandler(
-                GetDailyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetMonthlyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetVehiclePerformanceUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                vehicle_repo, None
-            )
-            result = await report_handler.start_vehicle_performance(update, context)
-            session.close()
-            return result
-
-        async def show_vehicle_performance_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            report_handler = ReportHandler(
-                GetDailyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetMonthlyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetVehiclePerformanceUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                vehicle_repo, None
-            )
-            result = await report_handler.show_vehicle_performance(update, context)
-            session.close()
-            return result
-
-        async def export_placeholder_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            session, _, _, _, _, _, vehicle_repo, trip_repo, fuel_repo = self._get_repositories()
-            report_handler = ReportHandler(
-                GetDailyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetMonthlyReportUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                GetVehiclePerformanceUseCase(vehicle_repo, None, trip_repo, fuel_repo),
-                vehicle_repo, None
-            )
-            await report_handler.export_placeholder(update, context)
-            session.close()
-
-        async def back_to_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle back to menu button"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-
-            try:
-                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
-                await menu_handler.show_menu(update, context)
-            finally:
-                session.close()
-
-        async def show_daily_operation_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle daily operation menu button"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-
-            try:
-                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
-                await menu_handler.show_daily_operation_menu(update, context)
-                return ConversationHandler.END
-            finally:
-                session.close()
-
-        async def show_report_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle report menu button"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-
-            try:
-                menu_handler = MenuHandler(check_in_enabled=False, group_repository=group_repo)
-                await menu_handler.show_report_menu(update, context)
-            finally:
-                session.close()
-
-        async def report_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle /report command"""
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            check_in_repo = repos['check_in_repo']
-            employee_repo = repos['employee_repo']
-
-            try:
-                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
-                await report_handler.show_report_menu(update, context)
-            finally:
-                session.close()
-
-        async def menu_reports_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle Reports button from menu - show report selection"""
-            query = update.callback_query
-            await query.answer()
-
-            # Extract group_id from callback_data: "menu_reports_{group_id}"
-            group_id = int(query.data.split('_')[-1])
-
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            check_in_repo = repos['check_in_repo']
-            employee_repo = repos['employee_repo']
-
-            try:
-                # Get group
-                group = group_repo.find_by_id(group_id)
-                if not group:
-                    await query.edit_message_text("⚠️ Group not found.")
-                    return
-
-                # Show report type selection
-                keyboard = [
-                    [InlineKeyboardButton("📅 របាយការណ៍ថ្ងៃនេះ Today's Report", callback_data=f"report_daily_{group.id}")],
-                    [InlineKeyboardButton("📆 របាយការណ៍ខែនេះ Monthly Report", callback_data=f"report_monthly_{group.id}")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data=f"back_to_main_menu_{group_id}")],
-                ]
-
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
-                await query.edit_message_text(
-                    f"**{group.business_name or group.name}**\n\n"
-                    f"📊 **របាយការណ៍ការចុះឈ្មោះ Check-In Reports**\n\n"
-                    f"សូមជ្រើសរើសប្រភេទរបាយការណ៍:\n"
-                    f"Please select report type:",
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
-            finally:
-                session.close()
-
-        async def report_daily_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle daily report callback"""
-            query = update.callback_query
-            # Extract group_id from callback_data: "report_daily_{group_id}"
-            group_id = int(query.data.split('_')[-1])
-
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            check_in_repo = repos['check_in_repo']
-            employee_repo = repos['employee_repo']
-
-            try:
-                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
-                await report_handler.show_daily_report(update, context, group_id)
-            finally:
-                session.close()
-
-        async def report_monthly_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle monthly report callback"""
-            query = update.callback_query
-            # Extract group_id from callback_data: "report_monthly_{group_id}"
-            group_id = int(query.data.split('_')[-1])
-
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-            check_in_repo = repos['check_in_repo']
-            employee_repo = repos['employee_repo']
-
-            try:
-                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
-                await report_handler.show_monthly_report(update, context, group_id)
-            finally:
-                session.close()
-
-        async def back_to_main_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle back to main menu button"""
-            query = update.callback_query
-            await query.answer()
-
-            # Extract group_id from callback_data
-            group_id = int(query.data.split('_')[-1])
-
-            repos = self._get_repositories_for_handlers()
-            session = repos['session']
-            group_repo = repos['group_repo']
-
-            try:
-                # Get group
-                group = group_repo.find_by_id(group_id)
-                if not group:
-                    await query.edit_message_text("⚠️ Group not found.")
-                    return
-
-                # Recreate the main menu
-                group_id_param = abs(int(group.chat_id))
-
-                checkin_link = f"https://t.me/office_automation_bot/checkin?startapp=group_{group_id_param}"
-                balance_link = f"https://t.me/office_automation_bot/balance?startapp=group_{group_id_param}"
-
-                keyboard = [
-                    [InlineKeyboardButton("✅ Check In", url=checkin_link)],
-                    [InlineKeyboardButton("💰 View Balance", url=balance_link)],
-                    [InlineKeyboardButton("📊 Reports", callback_data=f"menu_reports_{group.id}")],
-                ]
-
-                reply_markup = InlineKeyboardMarkup(keyboard)
-
-                business_name = group.business_name or group.name
-                message_text = (
-                    f"**{business_name}**\n\n"
-                    f"Select an action below:\n"
-                    f"• **Check In** - Record your attendance with photo & location\n"
-                    f"• **View Balance** - See your salary balance and advances\n"
-                    f"• **My Reports** - View your attendance and payment history"
-                )
-
-                await query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='Markdown')
-            finally:
-                session.close()
-
-        async def cancel_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle cancel button from main menu"""
-            query = update.callback_query
-            await query.answer()
-            await query.edit_message_text("❌ ម៉ឺនុយត្រូវបានបោះបង់។")
-
-        async def cancel_setup_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            """Handle cancel button from setup menu"""
-            query = update.callback_query
-            await query.answer()
-            await query.edit_message_text("❌ ការរៀបចំត្រូវបានបោះបង់។")
-            return ConversationHandler.END
+        # Create wrapper functions from modules
+        employee_wrappers = create_employee_wrappers(self._get_repositories, self.show_menu)
+        salary_wrappers = create_salary_wrappers(self._get_repositories, self.show_menu)
+        registration_wrappers = create_registration_wrappers(self._get_repositories_for_handlers)
+        menu_wrappers = create_menu_wrappers(self._get_repositories_for_handlers)
+        setup_wrappers = create_setup_wrappers(self._get_repositories)
+        vehicle_ops_wrappers = create_vehicle_operations_wrappers(self._get_repositories)
+        report_wrappers = create_report_wrappers(self._get_repositories)
+
+        # Extract wrappers for easier reference
+        start_wrapper = employee_wrappers['start_wrapper']
+        register_wrapper = employee_wrappers['register_wrapper']
+        register_command_wrapper = employee_wrappers['register_command_wrapper']
+        request_advance_placeholder = employee_wrappers['request_advance_placeholder']
+
+        salary_advance_start_wrapper = salary_wrappers['salary_advance_start_wrapper']
+        salary_advance_amount_wrapper = salary_wrappers['salary_advance_amount_wrapper']
+        salary_advance_note_wrapper = salary_wrappers['salary_advance_note_wrapper']
+        salary_advance_save_wrapper = salary_wrappers['salary_advance_save_wrapper']
+
+        register_group_start_wrapper = registration_wrappers['register_group_start_wrapper']
+        register_group_receive_name_wrapper = registration_wrappers['register_group_receive_name_wrapper']
+
+        menu_wrapper = menu_wrappers['menu_wrapper']
+        report_command_wrapper = menu_wrappers['report_command_wrapper']
+        menu_reports_callback_wrapper = menu_wrappers['menu_reports_callback_wrapper']
+        report_daily_callback_wrapper = menu_wrappers['report_daily_callback_wrapper']
+        report_monthly_callback_wrapper = menu_wrappers['report_monthly_callback_wrapper']
+        back_to_main_menu_wrapper = menu_wrappers['back_to_main_menu_wrapper']
+        back_to_menu_wrapper = menu_wrappers['back_to_menu_wrapper']
+        show_daily_operation_menu_wrapper = menu_wrappers['show_daily_operation_menu_wrapper']
+        show_report_menu_wrapper = menu_wrappers['show_report_menu_wrapper']
+        cancel_menu_wrapper = menu_wrappers['cancel_menu_wrapper']
+
+        setup_menu_wrapper = setup_wrappers['setup_menu_wrapper']
+        setup_vehicle_start_wrapper = setup_wrappers['setup_vehicle_start_wrapper']
+        setup_vehicle_plate_wrapper = setup_wrappers['setup_vehicle_plate_wrapper']
+        setup_vehicle_driver_wrapper = setup_wrappers['setup_vehicle_driver_wrapper']
+        setup_driver_start_wrapper = setup_wrappers['setup_driver_start_wrapper']
+        setup_driver_name_wrapper = setup_wrappers['setup_driver_name_wrapper']
+        setup_driver_role_wrapper = setup_wrappers['setup_driver_role_wrapper']
+        setup_driver_phone_wrapper = setup_wrappers['setup_driver_phone_wrapper']
+        setup_driver_vehicle_wrapper = setup_wrappers['setup_driver_vehicle_wrapper']
+        setup_list_vehicles_wrapper = setup_wrappers['setup_list_vehicles_wrapper']
+        setup_list_drivers_wrapper = setup_wrappers['setup_list_drivers_wrapper']
+        setup_delete_vehicle_wrapper = setup_wrappers['setup_delete_vehicle_wrapper']
+        setup_delete_driver_wrapper = setup_wrappers['setup_delete_driver_wrapper']
+        setup_back_to_menu_wrapper = setup_wrappers['setup_back_to_menu_wrapper']
+        cancel_setup_wrapper = setup_wrappers['cancel_setup_wrapper']
+
+        start_trip_recording_wrapper = vehicle_ops_wrappers['start_trip_recording_wrapper']
+        select_trip_vehicle_wrapper = vehicle_ops_wrappers['select_trip_vehicle_wrapper']
+        receive_trip_count_wrapper = vehicle_ops_wrappers['receive_trip_count_wrapper']
+        receive_total_loading_size_wrapper = vehicle_ops_wrappers['receive_total_loading_size_wrapper']
+        start_fuel_recording_wrapper = vehicle_ops_wrappers['start_fuel_recording_wrapper']
+        select_fuel_vehicle_wrapper = vehicle_ops_wrappers['select_fuel_vehicle_wrapper']
+        receive_fuel_liters_wrapper = vehicle_ops_wrappers['receive_fuel_liters_wrapper']
+        receive_fuel_cost_wrapper = vehicle_ops_wrappers['receive_fuel_cost_wrapper']
+        complete_fuel_record_wrapper = vehicle_ops_wrappers['complete_fuel_record_wrapper']
+
+        show_daily_report_wrapper = report_wrappers['show_daily_report_wrapper']
+        show_monthly_report_wrapper = report_wrappers['show_monthly_report_wrapper']
+        start_vehicle_performance_wrapper = report_wrappers['start_vehicle_performance_wrapper']
+        show_vehicle_performance_wrapper = report_wrappers['show_vehicle_performance_wrapper']
+        export_placeholder_wrapper = report_wrappers['export_placeholder_wrapper']
 
         # Registration conversation handler
         registration_conv = ConversationHandler(
