@@ -144,6 +144,7 @@ class CheckInReportHandler:
             employee = self.employee_repository.find_by_id(checkin.employee_id)
             employee_name = employee.name if employee else 'Unknown'
             time_str = checkin.timestamp.strftime("%H:%M") if checkin.timestamp else "N/A"
+            type_str = checkin.type.value if hasattr(checkin, 'type') else 'checkin'
 
             # Create Google Maps link
             if checkin.location and checkin.location.latitude and checkin.location.longitude:
@@ -153,6 +154,7 @@ class CheckInReportHandler:
 
             check_in_data.append({
                 'name': employee_name,
+                'type': type_str,
                 'time': time_str,
                 'link': maps_link
             })
@@ -164,21 +166,22 @@ class CheckInReportHandler:
         max_name_len = max(len(row['name']) for row in check_in_data)
         max_name_len = max(max_name_len, len("Employee"))
         name_width = min(max_name_len, 20)  # Cap at 20 characters
+        type_width = 8  # checkin/checkout
         time_width = 8  # HH:MM format
 
         # Build table header
         table_lines = []
-        header = f"{'Employee':<{name_width}} | {'Time':<{time_width}} | Location"
-        separator = f"{'-' * name_width}-+-{'-' * time_width}-+----------"
+        header = f"{'Employee':<{name_width}} | {'Type':<{type_width}} | Time"
+        separator = f"{'-' * name_width}-+-{'-' * type_width}-+------"
         table_lines.append(header)
         table_lines.append(separator)
 
         # Build table rows
         for row in check_in_data:
             name = row['name'][:name_width].ljust(name_width)
-            time = row['time'].ljust(time_width)
-            location = "View Map" if row['link'] != "N/A" else "N/A"
-            table_lines.append(f"{name} | {time} | {location}")
+            type_val = row['type'].ljust(type_width)
+            time = row['time']
+            table_lines.append(f"{name} | {type_val} | {time}")
 
         table_text = "\n".join(table_lines)
 
