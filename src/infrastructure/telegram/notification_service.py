@@ -59,7 +59,7 @@ class TelegramNotificationService:
             )
 
             if maps_link:
-                message += f"\n🗺️ [View on Google Maps]({maps_link})"
+                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
 
             # Send message synchronously using asyncio
             loop = asyncio.new_event_loop()
@@ -150,7 +150,7 @@ class TelegramNotificationService:
             )
 
             if maps_link:
-                message += f"\n🗺️ [View on Google Maps]({maps_link})"
+                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
 
             # If photo_url is provided, send photo with caption
             if photo_url:
@@ -224,11 +224,11 @@ class TelegramNotificationService:
                 f"🚪 **Check-Out Alert**\n\n"
                 f"👤 **Employee:** {employee_name}\n"
                 f"🕒 **Time:** {timestamp}\n"
-                f"📍 **Location:** {location}"
+                # f"📍 **Location:** {location}"
             )
 
             if maps_link:
-                message += f"\n🗺️ [View on Google Maps]({maps_link})"
+                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
 
             # Send message synchronously using asyncio
             loop = asyncio.new_event_loop()
@@ -315,11 +315,11 @@ class TelegramNotificationService:
                 f"🚪 **Check-Out Alert**\n\n"
                 f"👤 **Employee:** {employee_name}\n"
                 f"🕒 **Time:** {timestamp}\n"
-                f"📍 **Location:** {location}"
+                # f"📍 **Location:** {location}"
             )
 
             if maps_link:
-                message += f"\n🗺️ [View on Google Maps]({maps_link})"
+                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
 
             # If photo_url is provided, send photo with caption
             if photo_url:
