@@ -7,6 +7,7 @@ from ....infrastructure.persistence.employee_repository_impl import EmployeeRepo
 from ....infrastructure.persistence.check_in_repository_impl import CheckInRepository
 from ....infrastructure.persistence.group_repository_impl import GroupRepository
 from ....infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
+from ....infrastructure.persistence.telegram_user_repository_impl import TelegramUserRepository
 from ....application.use_cases.record_check_in import RecordCheckInUseCase
 from ....application.use_cases.get_employee import GetEmployeeUseCase
 from ....application.use_cases.register_group import RegisterGroupUseCase
@@ -29,6 +30,7 @@ def get_repositories():
         CheckInRepository(session),
         GroupRepository(session),
         EmployeeGroupRepository(session),
+        TelegramUserRepository(session),
         session
     )
 
@@ -159,7 +161,7 @@ def checkin():
             }), 400
 
         # Get repositories
-        employee_repo, check_in_repo, group_repo, employee_group_repo, session = get_repositories()
+        employee_repo, check_in_repo, group_repo, employee_group_repo, telegram_user_repo, session = get_repositories()
 
         try:
             # Get or create employee
@@ -173,7 +175,7 @@ def checkin():
                 }), 404
 
             # Get or create group
-            register_group_use_case = RegisterGroupUseCase(group_repo)
+            register_group_use_case = RegisterGroupUseCase(group_repo, telegram_user_repo)
             group_name = request.form.get('group_name', f'Group {group_chat_id}')
             group = register_group_use_case.execute(
                 chat_id=str(group_chat_id),
