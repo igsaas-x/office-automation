@@ -32,11 +32,11 @@ def get_employees():
       - Employees
     parameters:
       - in: query
-        name: group_id
-        type: integer
+        name: chat_id
+        type: string
         required: false
-        description: Filter employees by group ID
-        example: 1
+        description: Filter employees by Telegram chat ID (group chat ID)
+        example: "-1001234567890"
     responses:
       200:
         description: Employees retrieved successfully
@@ -81,23 +81,36 @@ def get_employees():
                   created_at:
                     type: string
                     example: "2024-01-01T10:30:00"
+      404:
+        description: Group not found
       500:
         description: Internal server error
     """
     try:
-        group_id = request.args.get('group_id')
+        chat_id = request.args.get('chat_id')
 
         # Get repositories
         employee_repo, _, _, session = get_repositories()
 
         try:
-            # If group_id is provided, filter by group
-            if group_id:
+            # If chat_id is provided, filter by group
+            if chat_id:
                 from ....infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
+                from ....infrastructure.persistence.group_repository_impl import GroupRepository
+
+                group_repo = GroupRepository(session)
                 employee_group_repo = EmployeeGroupRepository(session)
 
+                # Find group by chat_id
+                group = group_repo.find_by_chat_id(str(chat_id))
+                if not group:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Group with chat_id {chat_id} not found'
+                    }), 404
+
                 # Get all employee-group associations for this group
-                associations = employee_group_repo.find_by_group_id(int(group_id))
+                associations = employee_group_repo.find_by_group_id(group.id)
                 employee_ids = [assoc.employee_id for assoc in associations]
 
                 # Get employees by IDs
