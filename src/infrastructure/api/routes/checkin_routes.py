@@ -78,6 +78,14 @@ def checkin():
         description: Group name (optional)
         example: "Office Team"
       - in: formData
+        name: type
+        type: string
+        required: false
+        enum: ["checkin", "checkout"]
+        default: "checkin"
+        description: Type of check-in record (checkin or checkout)
+        example: "checkin"
+      - in: formData
         name: photo
         type: file
         required: false
@@ -148,6 +156,7 @@ def checkin():
         group_chat_id = request.form.get('group_chat_id')
         latitude = request.form.get('latitude')
         longitude = request.form.get('longitude')
+        type_str = request.form.get('type', 'checkin')  # Default to 'checkin' if not provided
 
         # Validate required fields
         if not all([telegram_user_id, group_chat_id, latitude, longitude]):
@@ -160,6 +169,8 @@ def checkin():
         try:
             latitude = float(latitude)
             longitude = float(longitude)
+            # Convert type string to enum
+            check_in_type = CheckInType.CHECKOUT if type_str.lower() == 'checkout' else CheckInType.CHECKIN
         except ValueError:
             return jsonify({
                 'success': False,
@@ -225,7 +236,7 @@ def checkin():
                 group_id=group.id,
                 latitude=latitude,
                 longitude=longitude,
-                type=CheckInType.CHECKIN,
+                type=check_in_type,
                 photo_url=photo_url
             )
 
@@ -240,18 +251,29 @@ def checkin():
             # Send notification to group
             try:
                 notification_service = get_notification_service()
-                notification_service.send_checkin_notification(
-                    group_chat_id=group_chat_id,
-                    employee_name=employee.name,
-                    timestamp=response.timestamp,
-                    location=response.location,
-                    latitude=latitude,
-                    longitude=longitude,
-                    photo_url=photo_url
-                )
+                if check_in_type == CheckInType.CHECKOUT:
+                    notification_service.send_checkout_notification(
+                        group_chat_id=group_chat_id,
+                        employee_name=employee.name,
+                        timestamp=response.timestamp,
+                        location=response.location,
+                        latitude=latitude,
+                        longitude=longitude,
+                        photo_url=photo_url
+                    )
+                else:
+                    notification_service.send_checkin_notification(
+                        group_chat_id=group_chat_id,
+                        employee_name=employee.name,
+                        timestamp=response.timestamp,
+                        location=response.location,
+                        latitude=latitude,
+                        longitude=longitude,
+                        photo_url=photo_url
+                    )
             except Exception as e:
                 # Log error but don't fail the check-in
-                print(f"Failed to send check-in notification: {e}")
+                print(f"Failed to send notification: {e}")
 
             return jsonify({
                 'success': True,
@@ -323,6 +345,14 @@ def checkout():
         description: Group name (optional)
         example: "Office Team"
       - in: formData
+        name: type
+        type: string
+        required: false
+        enum: ["checkin", "checkout"]
+        default: "checkin"
+        description: Type of check-in record (checkin or checkout)
+        example: "checkout"
+      - in: formData
         name: photo
         type: file
         required: false
@@ -393,6 +423,7 @@ def checkout():
         group_chat_id = request.form.get('group_chat_id')
         latitude = request.form.get('latitude')
         longitude = request.form.get('longitude')
+        type_str = request.form.get('type', 'checkin')  # Default to 'checkin' if not provided
 
         # Validate required fields
         if not all([telegram_user_id, group_chat_id, latitude, longitude]):
@@ -405,6 +436,8 @@ def checkout():
         try:
             latitude = float(latitude)
             longitude = float(longitude)
+            # Convert type string to enum
+            check_in_type = CheckInType.CHECKOUT if type_str.lower() == 'checkout' else CheckInType.CHECKIN
         except ValueError:
             return jsonify({
                 'success': False,
@@ -470,7 +503,7 @@ def checkout():
                 group_id=group.id,
                 latitude=latitude,
                 longitude=longitude,
-                type=CheckInType.CHECKOUT,
+                type=check_in_type,
                 photo_url=photo_url
             )
 
@@ -485,18 +518,29 @@ def checkout():
             # Send notification to group
             try:
                 notification_service = get_notification_service()
-                notification_service.send_checkout_notification(
-                    group_chat_id=group_chat_id,
-                    employee_name=employee.name,
-                    timestamp=response.timestamp,
-                    location=response.location,
-                    latitude=latitude,
-                    longitude=longitude,
-                    photo_url=photo_url
-                )
+                if check_in_type == CheckInType.CHECKOUT:
+                    notification_service.send_checkout_notification(
+                        group_chat_id=group_chat_id,
+                        employee_name=employee.name,
+                        timestamp=response.timestamp,
+                        location=response.location,
+                        latitude=latitude,
+                        longitude=longitude,
+                        photo_url=photo_url
+                    )
+                else:
+                    notification_service.send_checkin_notification(
+                        group_chat_id=group_chat_id,
+                        employee_name=employee.name,
+                        timestamp=response.timestamp,
+                        location=response.location,
+                        latitude=latitude,
+                        longitude=longitude,
+                        photo_url=photo_url
+                    )
             except Exception as e:
-                # Log error but don't fail the check-out
-                print(f"Failed to send check-out notification: {e}")
+                # Log error but don't fail the request
+                print(f"Failed to send notification: {e}")
 
             return jsonify({
                 'success': True,
