@@ -76,18 +76,17 @@ class MenuHandler:
             return
 
         # Generate deep links with group context
-        bot_username = context.bot.username
         group_id_param = abs(int(chat.id))  # Remove negative sign for URL
 
-        checkin_link = f"https://t.me/{bot_username}/checkin?startapp=group_{group_id_param}"
-        balance_link = f"https://t.me/{bot_username}/balance?startapp=group_{group_id_param}"
-        reports_link = f"https://t.me/{bot_username}/reports?startapp=group_{group_id_param}"
+        checkin_link = f"https://t.me/office_automation_bot/checkin?startapp=group_{group_id_param}"
+        balance_link = f"https://t.me/office_automation_bot/balance?startapp=group_{group_id_param}"
+        reports_link = f"https://t.me/office_automation_bot/reports?startapp=group_{group_id_param}"
 
         # Create inline keyboard with action buttons
         keyboard = [
-            [InlineKeyboardButton("✅ ចុះឈ្មោះ Check In", url=checkin_link)],
-            [InlineKeyboardButton("💰 មើលសមតុល្យ View Balance", url=balance_link)],
-            [InlineKeyboardButton("📊 របាយការណ៍ My Reports", url=reports_link)],
+            [InlineKeyboardButton("✅ Check In", url=checkin_link)],
+            [InlineKeyboardButton("💰 View Balance", url=balance_link)],
+            [InlineKeyboardButton("📊 Reports", url=reports_link)],
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
