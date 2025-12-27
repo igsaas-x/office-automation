@@ -94,11 +94,6 @@ class MenuHandler:
         business_name = group.business_name or group.name
         message_text = (
             f"**{business_name}**\n\n"
-            f"សូមជ្រើសរើសមុខងារខាងក្រោម:\n"
-            f"• **ចុះឈ្មោះ** - កត់ត្រាវត្តមានជាមួយរូបភាព និងទីតាំង\n"
-            f"• **មើលសមតុល្យ** - មើលសមតុល្យប្រាក់ខែ និងបុរេ\n"
-            f"• **របាយការណ៍** - មើលប្រវត្តិវត្តមាន និងការទូទាត់\n\n"
-            f"---\n\n"
             f"Select an action below:\n"
             f"• **Check In** - Record your attendance with photo & location\n"
             f"• **View Balance** - See your salary balance and advances\n"
