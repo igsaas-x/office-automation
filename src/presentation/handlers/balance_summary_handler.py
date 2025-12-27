@@ -221,7 +221,7 @@ class BalanceSummaryHandler:
                 currency=parsed.currency,
             )
             await message.reply_text(
-                f"✅ Logged #{append_result.get('sequence')}: "
+                f"✅ Noted #{append_result.get('sequence')}: "
                 f"{self._format_amount(parsed.amount_value, parsed.currency)} - {parsed.purpose}"
             )
         except Exception as e:
