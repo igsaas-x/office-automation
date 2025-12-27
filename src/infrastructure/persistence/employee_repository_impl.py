@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from ...domain.entities.employee import Employee
 from ...domain.repositories.employee_repository import IEmployeeRepository
@@ -53,6 +53,10 @@ class EmployeeRepository(IEmployeeRepository):
             EmployeeModel.name.ilike(f"%{name}%")
         ).first()
         return self._to_entity(db_employee) if db_employee else None
+
+    def find_all(self) -> List[Employee]:
+        db_employees = self.session.query(EmployeeModel).order_by(EmployeeModel.created_at.desc()).all()
+        return [self._to_entity(emp) for emp in db_employees]
 
     def _to_entity(self, model: EmployeeModel) -> Employee:
         return Employee(

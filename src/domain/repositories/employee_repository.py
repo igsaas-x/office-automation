@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 from ..entities.employee import Employee
 
 class IEmployeeRepository(ABC):
@@ -17,4 +17,8 @@ class IEmployeeRepository(ABC):
 
     @abstractmethod
     def find_by_name(self, name: str) -> Optional[Employee]:
+        pass
+
+    @abstractmethod
+    def find_all(self) -> List[Employee]:
         pass

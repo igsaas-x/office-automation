@@ -23,6 +23,121 @@ def get_repositories():
         session
     )
 
+@employee_bp.route('/employees', methods=['GET'])
+def get_employees():
+    """
+    Get all employees
+    ---
+    tags:
+      - Employees
+    parameters:
+      - in: query
+        name: group_id
+        type: integer
+        required: false
+        description: Filter employees by group ID
+        example: 1
+    responses:
+      200:
+        description: Employees retrieved successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  telegram_id:
+                    type: string
+                    example: "123456789"
+                  name:
+                    type: string
+                    example: "John Doe"
+                  phone:
+                    type: string
+                    example: "1234567890"
+                  role:
+                    type: string
+                    example: "Developer"
+                  date_start_work:
+                    type: string
+                    example: "2024-01-01T00:00:00"
+                  probation_months:
+                    type: integer
+                    example: 3
+                  base_salary:
+                    type: number
+                    example: 1000.0
+                  bonus:
+                    type: number
+                    example: 100.0
+                  created_at:
+                    type: string
+                    example: "2024-01-01T10:30:00"
+      500:
+        description: Internal server error
+    """
+    try:
+        group_id = request.args.get('group_id')
+
+        # Get repositories
+        employee_repo, _, _, session = get_repositories()
+
+        try:
+            # If group_id is provided, filter by group
+            if group_id:
+                from ....infrastructure.persistence.employee_group_repository_impl import EmployeeGroupRepository
+                employee_group_repo = EmployeeGroupRepository(session)
+
+                # Get all employee-group associations for this group
+                associations = employee_group_repo.find_by_group_id(int(group_id))
+                employee_ids = [assoc.employee_id for assoc in associations]
+
+                # Get employees by IDs
+                employees = []
+                for emp_id in employee_ids:
+                    emp = employee_repo.find_by_id(emp_id)
+                    if emp:
+                        employees.append(emp)
+            else:
+                # Get all employees
+                employees = employee_repo.find_all()
+
+            return jsonify({
+                'success': True,
+                'data': [
+                    {
+                        'id': emp.id,
+                        'telegram_id': emp.telegram_id,
+                        'name': emp.name,
+                        'phone': emp.phone,
+                        'role': emp.role,
+                        'date_start_work': emp.date_start_work.isoformat() if emp.date_start_work else None,
+                        'probation_months': emp.probation_months,
+                        'base_salary': emp.base_salary,
+                        'bonus': emp.bonus,
+                        'created_at': emp.created_at.isoformat() if emp.created_at else None
+                    }
+                    for emp in employees
+                ]
+            }), 200
+
+        finally:
+            session.close()
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Internal server error: {str(e)}'
+        }), 500
+
 @employee_bp.route('/employees/register', methods=['POST'])
 def register_employee():
     """
