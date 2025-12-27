@@ -45,7 +45,7 @@ class ExcelExportService:
         # Create workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = f"Check-In Report - {month:02d}/{year}"
+        ws.title = f"Check-In Report - {month:02d}-{year}"
 
         # Add summary section
         self._add_summary_section(ws, group, month, year, check_ins, employees)

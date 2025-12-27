@@ -238,6 +238,8 @@ def checkin():
                     employee_name=employee.name,
                     timestamp=response.timestamp,
                     location=response.location,
+                    latitude=latitude,
+                    longitude=longitude,
                     photo_url=photo_url
                 )
             except Exception as e:
