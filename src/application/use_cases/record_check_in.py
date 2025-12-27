@@ -38,6 +38,7 @@ class RecordCheckInUseCase:
             employee_id=request.employee_id,
             group_id=request.group_id,
             location=location,
+            type=request.type,
             photo_url=request.photo_url
         )
 

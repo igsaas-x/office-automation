@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+from ...domain.value_objects.check_in_type import CheckInType
 
 @dataclass
 class CheckInRequest:
@@ -7,6 +8,7 @@ class CheckInRequest:
     group_id: int
     latitude: float
     longitude: float
+    type: CheckInType = CheckInType.CHECKIN
     photo_url: Optional[str] = None
 
 @dataclass

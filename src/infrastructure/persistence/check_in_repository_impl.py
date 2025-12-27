@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from ...domain.entities.check_in import CheckIn
 from ...domain.value_objects.location import Location
+from ...domain.value_objects.check_in_type import CheckInType
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from .models import CheckInModel
 
@@ -18,6 +19,7 @@ class CheckInRepository(ICheckInRepository):
             latitude=check_in.location.latitude,
             longitude=check_in.location.longitude,
             photo_url=check_in.photo_url,
+            type=check_in.type.value,  # Convert enum to string
             timestamp=check_in.timestamp
         )
         self.session.add(db_check_in)
@@ -74,5 +76,6 @@ class CheckInRepository(ICheckInRepository):
                 longitude=model.longitude
             ),
             timestamp=model.timestamp,
+            type=CheckInType(model.type),  # Convert string to enum
             photo_url=model.photo_url
         )

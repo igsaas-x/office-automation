@@ -13,6 +13,7 @@ from ....application.use_cases.get_employee import GetEmployeeUseCase
 from ....application.use_cases.register_group import RegisterGroupUseCase
 from ....application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
 from ....application.dto.check_in_dto import CheckInRequest
+from ....domain.value_objects.check_in_type import CheckInType
 from ....infrastructure.telegram.notification_service import get_notification_service
 
 checkin_bp = Blueprint('checkin', __name__)
@@ -219,6 +220,7 @@ def checkin():
                 group_id=group.id,
                 latitude=latitude,
                 longitude=longitude,
+                type=CheckInType.CHECKIN,
                 photo_url=photo_url
             )
 
@@ -451,12 +453,13 @@ def checkout():
                     file.save(file_path)
                     photo_url = f"/uploads/photos/{unique_filename}"
 
-            # Create check-in request (same as check-in)
+            # Create check-out request
             check_in_request = CheckInRequest(
                 employee_id=employee.id,
                 group_id=group.id,
                 latitude=latitude,
                 longitude=longitude,
+                type=CheckInType.CHECKOUT,
                 photo_url=photo_url
             )
 

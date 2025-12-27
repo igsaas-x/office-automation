@@ -87,6 +87,7 @@ class CheckInModel(Base):
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     photo_url = Column(String(512), nullable=True)
+    type = Column(String(20), nullable=False, default='checkin')  # 'checkin' or 'checkout'
     timestamp = Column(DateTime, default=utc_now)
 
     employee = relationship('EmployeeModel', back_populates='check_ins')
