@@ -5,8 +5,10 @@ Flask API server for Office Automation Mini App
 import os
 from src.infrastructure.api.flask_app import create_app
 from src.infrastructure.persistence.database import database
+from src.infrastructure.utils.logging_config import setup_logging
 
 def main():
+    setup_logging()
     # Initialize database
     database.create_tables()
 

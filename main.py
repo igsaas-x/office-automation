@@ -6,10 +6,12 @@ from src.infrastructure.telegram.balance_bot_app import BalanceBotApplication
 from src.infrastructure.api.flask_app import create_app
 from src.infrastructure.persistence.database import database
 from src.infrastructure.config.settings import settings
+from src.infrastructure.utils.logging_config import setup_logging
 
 
 def run_checkin_bot():
     """Run the check-in bot in a separate process"""
+    setup_logging()
     settings.load_admin_ids([
         # 123456789,  # Replace with actual admin telegram IDs
     ])
@@ -19,12 +21,14 @@ def run_checkin_bot():
 
 def run_balance_bot():
     """Run the balance bot in a separate process"""
+    setup_logging()
     bot = BalanceBotApplication()
     bot.run()
 
 
 def run_api_server():
     """Run the Flask API server in a separate process"""
+    setup_logging()
     # Initialize database
     database.create_tables()
 

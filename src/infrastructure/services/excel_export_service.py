@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter
 from ...domain.entities.check_in import CheckIn
 from ...domain.entities.employee import Employee
 from ...domain.entities.group import Group
+from ..utils.timezone import format_ict_datetime, format_ict_time, utc_to_ict
 
 
 class ExcelExportService:
@@ -123,11 +124,11 @@ class ExcelExportService:
         employees: Dict[int, Employee]
     ):
         """Populate data rows sorted by date and employee name"""
-        # Sort check-ins by timestamp (date), then by employee name
+        # Sort check-ins by timestamp (date in ICT), then by employee name
         sorted_check_ins = sorted(
             check_ins,
             key=lambda ci: (
-                ci.timestamp.date(),
+                utc_to_ict(ci.timestamp).date(),  # Convert to ICT before getting date
                 employees.get(ci.employee_id, Employee(
                     id=None,
                     telegram_id="",
@@ -152,12 +153,12 @@ class ExcelExportService:
             # Employee name
             ws.cell(row=row_num, column=1, value=employee_name)
 
-            # Date (DD/MM/YYYY)
-            date_str = check_in.timestamp.strftime("%d/%m/%Y")
+            # Date (DD/MM/YYYY) in ICT timezone
+            date_str = format_ict_datetime(check_in.timestamp, "%d/%m/%Y")
             ws.cell(row=row_num, column=2, value=date_str)
 
-            # Time (HH:MM)
-            time_str = check_in.timestamp.strftime("%H:%M")
+            # Time (HH:MM) in ICT timezone
+            time_str = format_ict_time(check_in.timestamp)
             ws.cell(row=row_num, column=3, value=time_str)
 
             # Location (Google Maps hyperlink or N/A)

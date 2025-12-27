@@ -5,8 +5,10 @@ from flasgger import Swagger
 from ..config.settings import settings
 from ..persistence.mongodb_connection import mongodb
 from .middleware import validate_telegram_auth
+from ..utils.logging_config import setup_logging
 
 def create_app():
+    setup_logging()
     app = Flask(__name__)
 
     # Configure JWT
