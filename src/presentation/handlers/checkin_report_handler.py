@@ -11,6 +11,7 @@ from ...domain.repositories.group_repository import IGroupRepository
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from ...domain.repositories.employee_repository import IEmployeeRepository
 from ...infrastructure.services.excel_export_service import ExcelExportService
+from ...infrastructure.utils.timezone import format_ict_time
 
 
 class CheckInReportHandler:
@@ -143,7 +144,7 @@ class CheckInReportHandler:
         for checkin in check_ins:
             employee = self.employee_repository.find_by_id(checkin.employee_id)
             employee_name = employee.name if employee else 'Unknown'
-            time_str = checkin.timestamp.strftime("%H:%M") if checkin.timestamp else "N/A"
+            time_str = format_ict_time(checkin.timestamp) if checkin.timestamp else "N/A"
             type_str = checkin.type.value if hasattr(checkin, 'type') else 'checkin'
 
             # Create Google Maps link

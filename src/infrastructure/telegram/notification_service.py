@@ -52,14 +52,15 @@ class TelegramNotificationService:
 
             # Format message
             message = (
-                f"✅ **Check-In Alert**\n\n"
-                f"👤 **Employee:** {employee_name}\n"
-                f"🕒 **Time:** {timestamp}"
-                # f"📍 **Location:** {location}"
+                f"✅ **CHECK-IN**\n"
+                f"បុគ្គលិក: {employee_name}\n"
+                f"ម៉ោងចូល: {timestamp}\n"
             )
 
             if maps_link:
-                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
+                message += f"ទីតាំង: [View on Google Maps]({maps_link})"
+            else:
+                message += f"ទីតាំង: N/A"
 
             # Send message synchronously using asyncio
             loop = asyncio.new_event_loop()
@@ -143,14 +144,15 @@ class TelegramNotificationService:
 
             # Format message
             message = (
-                f"✅ **Check-In Alert**\n\n"
-                f"👤 **Employee:** {employee_name}\n"
-                f"🕒 **Time:** {timestamp}"
-                # f"📍 **Location:** {location}"
+                f"✅ **CHECK-IN**\n"
+                f"បុគ្គលិក: {employee_name}\n"
+                f"ម៉ោងចូល: {timestamp}\n"
             )
 
             if maps_link:
-                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
+                message += f"ទីតាំង: [View on Google Maps]({maps_link})"
+            else:
+                message += f"ទីតាំង: N/A"
 
             # If photo_url is provided, send photo with caption
             if photo_url:
@@ -221,14 +223,15 @@ class TelegramNotificationService:
 
             # Format message
             message = (
-                f"🚪 **Check-Out Alert**\n\n"
-                f"👤 **Employee:** {employee_name}\n"
-                f"🕒 **Time:** {timestamp}\n"
-                # f"📍 **Location:** {location}"
+                f"🚪 **CHECK-OUT**\n"
+                f"បុគ្គលិក: {employee_name}\n"
+                f"ម៉ោងចេញ: {timestamp}\n"
             )
 
             if maps_link:
-                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
+                message += f"ទីតាំង: [View on Google Maps]({maps_link})"
+            else:
+                message += f"ទីតាំង: N/A"
 
             # Send message synchronously using asyncio
             loop = asyncio.new_event_loop()
@@ -312,14 +315,15 @@ class TelegramNotificationService:
 
             # Format message
             message = (
-                f"🚪 **Check-Out Alert**\n\n"
-                f"👤 **Employee:** {employee_name}\n"
-                f"🕒 **Time:** {timestamp}\n"
-                # f"📍 **Location:** {location}"
+                f"🚪 **CHECK-OUT**\n"
+                f"បុគ្គលិក: {employee_name}\n"
+                f"ម៉ោងចេញ: {timestamp}\n"
             )
 
             if maps_link:
-                message += f"\n🗺️ **Location:** [View on Google Maps]({maps_link})"
+                message += f"ទីតាំង: [View on Google Maps]({maps_link})"
+            else:
+                message += f"ទីតាំង: N/A"
 
             # If photo_url is provided, send photo with caption
             if photo_url:

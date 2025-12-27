@@ -3,6 +3,7 @@ from ...domain.value_objects.location import Location
 from ...domain.repositories.check_in_repository import ICheckInRepository
 from ...domain.repositories.employee_repository import IEmployeeRepository
 from ...domain.repositories.group_repository import IGroupRepository
+from ...infrastructure.utils.timezone import format_ict_datetime
 from ..dto.check_in_dto import CheckInRequest, CheckInResponse
 
 class RecordCheckInUseCase:
@@ -48,7 +49,7 @@ class RecordCheckInUseCase:
         return CheckInResponse(
             success=True,
             message="Check-in recorded successfully",
-            timestamp=saved_check_in.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            timestamp=format_ict_datetime(saved_check_in.timestamp),
             location=f"{location.latitude}, {location.longitude}",
             type=saved_check_in.type.value
         )
