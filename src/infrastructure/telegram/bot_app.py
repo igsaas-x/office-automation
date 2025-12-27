@@ -110,7 +110,7 @@ class BotApplication:
         user = update.effective_user
 
         keyboard = [
-            [InlineKeyboardButton("📍 ចុះឈ្មោះ", url="https://t.me/OALocal_bot/checkin")],
+            [InlineKeyboardButton("✅ Check In", url="https://t.me/OALocal_bot/checkin"), InlineKeyboardButton("🚪 Check Out", url="https://t.me/OALocal_bot/checkout")],
             [InlineKeyboardButton("📝 ស្នើសុំបុរេ", callback_data="REQUEST_ADVANCE")],
         ]
 
@@ -123,7 +123,7 @@ class BotApplication:
         name = employee_name or user.first_name
         menu_text = (
             f"សូមស្វាគមន៍ {name}!\nសូមជ្រើសរើសជម្រើសមួយ:\n"
-            "1. 📍 ចុះឈ្មោះ\n"
+            "1. ✅ Check In / 🚪 Check Out\n"
             "2. 📝 ស្នើសុំបុរេ"
         )
 
