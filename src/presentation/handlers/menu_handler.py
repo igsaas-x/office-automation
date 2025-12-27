@@ -79,11 +79,12 @@ class MenuHandler:
         group_id_param = abs(int(chat.id))  # Remove negative sign for URL
 
         checkin_link = f"https://t.me/office_automation_bot/checkin?startapp=group_{group_id_param}"
+        checkout_link = f"https://t.me/office_automation_bot/checkout?startapp=group_{group_id_param}"
         employee_link = f"https://t.me/office_automation_bot/employees?startapp=group_{group_id_param}"
 
         # Create inline keyboard with action buttons
         keyboard = [
-            [InlineKeyboardButton("✅ Check In", url=checkin_link)],
+            [InlineKeyboardButton("✅ Check In", url=checkin_link), InlineKeyboardButton("🚪 Check Out", url=checkout_link)],
             [InlineKeyboardButton("👥 Employees", url=employee_link)],
             [InlineKeyboardButton("📊 Reports", callback_data=f"menu_reports_{group.id}")],
         ]
@@ -94,7 +95,8 @@ class MenuHandler:
         message_text = (
             f"<b>{business_name}</b>\n\n"
             f"Select an action below:\n"
-            f"• <b>Check In</b> - Record your attendance with photo & location\n"
+            f"• <b>Check In</b> - Record your check-in with photo & location\n"
+            f"• <b>Check Out</b> - Record your check-out with photo & location\n"
             f"• <b>Employees</b> - View and manage employee information\n"
             f"• <b>Reports</b> - View attendance and payment history"
         )
