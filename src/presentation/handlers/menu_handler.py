@@ -92,14 +92,14 @@ class MenuHandler:
 
         business_name = group.business_name or group.name
         message_text = (
-            f"**{business_name}**\n\n"
+            f"<b>{business_name}</b>\n\n"
             f"Select an action below:\n"
-            f"• **Check In** - Record your attendance with photo & location\n"
-            f"• **View Balance** - See your salary balance and advances\n"
-            f"• **My Reports** - View your attendance and payment history"
+            f"• <b>Check In</b> - Record your attendance with photo & location\n"
+            f"• <b>View Balance</b> - See your salary balance and advances\n"
+            f"• <b>My Reports</b> - View your attendance and payment history"
         )
 
-        await message.reply_text(message_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await message.reply_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
 
     async def show_daily_operation_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show daily operation submenu"""

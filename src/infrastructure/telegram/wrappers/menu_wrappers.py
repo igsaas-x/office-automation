@@ -99,12 +99,12 @@ def create_menu_wrappers(get_repositories_func):
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await query.edit_message_text(
-                f"**{group.business_name or group.name}**\n\n"
-                f"📊 **របាយការណ៍ការចុះឈ្មោះ Check-In Reports**\n\n"
+                f"<b>{group.business_name or group.name}</b>\n\n"
+                f"📊 <b>របាយការណ៍ការចុះឈ្មោះ Check-In Reports</b>\n\n"
                 f"សូមជ្រើសរើសប្រភេទរបាយការណ៍:\n"
                 f"Please select report type:",
                 reply_markup=reply_markup,
-                parse_mode='Markdown'
+                parse_mode='HTML'
             )
         finally:
             session.close()
@@ -177,14 +177,14 @@ def create_menu_wrappers(get_repositories_func):
 
             business_name = group.business_name or group.name
             message_text = (
-                f"**{business_name}**\n\n"
+                f"<b>{business_name}</b>\n\n"
                 f"Select an action below:\n"
-                f"• **Check In** - Record your attendance with photo & location\n"
-                f"• **View Balance** - See your salary balance and advances\n"
-                f"• **My Reports** - View your attendance and payment history"
+                f"• <b>Check In</b> - Record your attendance with photo & location\n"
+                f"• <b>View Balance</b> - See your salary balance and advances\n"
+                f"• <b>My Reports</b> - View your attendance and payment history"
             )
 
-            await query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='Markdown')
+            await query.edit_message_text(message_text, reply_markup=reply_markup, parse_mode='HTML')
         finally:
             session.close()
 
