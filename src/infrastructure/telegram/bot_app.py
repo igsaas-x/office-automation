@@ -22,6 +22,7 @@ from ...presentation.handlers.registration_handler import (
     RegistrationHandler,
     WAITING_FOR_BUSINESS_NAME
 )
+from ...presentation.handlers.checkin_report_handler import CheckInReportHandler
 from ...presentation.handlers.salary_advance_handler import (
     SalaryAdvanceHandler,
     WAITING_EMPLOYEE_NAME_ADV,
@@ -678,6 +679,56 @@ class BotApplication:
             finally:
                 session.close()
 
+        async def report_command_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle /report command"""
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            check_in_repo = repos['check_in_repo']
+            employee_repo = repos['employee_repo']
+
+            try:
+                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+                await report_handler.show_report_menu(update, context)
+            finally:
+                session.close()
+
+        async def report_daily_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle daily report callback"""
+            query = update.callback_query
+            # Extract group_id from callback_data: "report_daily_{group_id}"
+            group_id = int(query.data.split('_')[-1])
+
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            check_in_repo = repos['check_in_repo']
+            employee_repo = repos['employee_repo']
+
+            try:
+                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+                await report_handler.show_daily_report(update, context, group_id)
+            finally:
+                session.close()
+
+        async def report_monthly_callback_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle monthly report callback"""
+            query = update.callback_query
+            # Extract group_id from callback_data: "report_monthly_{group_id}"
+            group_id = int(query.data.split('_')[-1])
+
+            repos = self._get_repositories_for_handlers()
+            session = repos['session']
+            group_repo = repos['group_repo']
+            check_in_repo = repos['check_in_repo']
+            employee_repo = repos['employee_repo']
+
+            try:
+                report_handler = CheckInReportHandler(group_repo, check_in_repo, employee_repo)
+                await report_handler.show_monthly_report(update, context, group_id)
+            finally:
+                session.close()
+
         async def cancel_menu_wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             """Handle cancel button from main menu"""
             query = update.callback_query
@@ -834,6 +885,7 @@ class BotApplication:
 
         # Add handlers
         self.app.add_handler(CommandHandler("menu", menu_wrapper))
+        self.app.add_handler(CommandHandler("report", report_command_wrapper))
         self.app.add_handler(group_registration_conv)
         self.app.add_handler(registration_conv)
         self.app.add_handler(CallbackQueryHandler(request_advance_placeholder, pattern="^REQUEST_ADVANCE$"))
@@ -859,6 +911,10 @@ class BotApplication:
         # Add submenu handlers
         self.app.add_handler(CallbackQueryHandler(show_daily_operation_menu_wrapper, pattern="^menu_daily_operation$"))
         self.app.add_handler(CallbackQueryHandler(show_report_menu_wrapper, pattern="^menu_report$"))
+
+        # Add report callback handlers
+        self.app.add_handler(CallbackQueryHandler(report_daily_callback_wrapper, pattern="^report_daily_"))
+        self.app.add_handler(CallbackQueryHandler(report_monthly_callback_wrapper, pattern="^report_monthly_"))
 
         # Add cancel handlers
         self.app.add_handler(CallbackQueryHandler(cancel_menu_wrapper, pattern="^cancel_menu$"))

@@ -29,7 +29,7 @@ def create_app():
 
     # Get admin portal origins from settings
     admin_origins = settings.get_cors_origins()
-    telegram_origins = ["https://web.telegram.org", "https://t.me"]
+    telegram_origins = ["https://web.telegram.org", "https://t.me", "https://mycheckin.b-cdn.net"]
 
     # Check if wildcard is enabled
     if admin_origins and admin_origins[0] == '*':
