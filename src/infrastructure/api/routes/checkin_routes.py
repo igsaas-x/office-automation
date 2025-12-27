@@ -12,6 +12,7 @@ from ....application.use_cases.get_employee import GetEmployeeUseCase
 from ....application.use_cases.register_group import RegisterGroupUseCase
 from ....application.use_cases.add_employee_to_group import AddEmployeeToGroupUseCase
 from ....application.dto.check_in_dto import CheckInRequest
+from ....infrastructure.telegram.notification_service import get_notification_service
 
 checkin_bp = Blueprint('checkin', __name__)
 
@@ -222,6 +223,20 @@ def checkin():
                 group_repo
             )
             response = record_check_in_use_case.execute(check_in_request)
+
+            # Send notification to group
+            try:
+                notification_service = get_notification_service()
+                notification_service.send_checkin_notification(
+                    group_chat_id=group_chat_id,
+                    employee_name=employee.name,
+                    timestamp=response.timestamp,
+                    location=response.location,
+                    photo_url=photo_url
+                )
+            except Exception as e:
+                # Log error but don't fail the check-in
+                print(f"Failed to send check-in notification: {e}")
 
             return jsonify({
                 'success': True,
