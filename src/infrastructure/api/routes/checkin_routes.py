@@ -109,6 +109,11 @@ def checkin():
                 location:
                   type: string
                   example: "11.5564, 104.9282"
+                type:
+                  type: string
+                  enum: ["checkin", "checkout"]
+                  example: "checkin"
+                  description: "Type of check-in record (automatically set to 'checkin' for this endpoint)"
                 photo_url:
                   type: string
                   example: "/uploads/photos/123456789_20240101_103000_photo.jpg"
@@ -256,6 +261,7 @@ def checkin():
                     'group_name': group.name,
                     'timestamp': response.timestamp,
                     'location': response.location,
+                    'type': response.type,
                     'photo_url': photo_url
                 }
             }), 200
@@ -348,6 +354,11 @@ def checkout():
                 location:
                   type: string
                   example: "11.5564, 104.9282"
+                type:
+                  type: string
+                  enum: ["checkin", "checkout"]
+                  example: "checkout"
+                  description: "Type of check-in record (automatically set to 'checkout' for this endpoint)"
                 photo_url:
                   type: string
                   example: "/uploads/photos/123456789_20240101_103000_photo.jpg"
@@ -495,6 +506,7 @@ def checkout():
                     'group_name': group.name,
                     'timestamp': response.timestamp,
                     'location': response.location,
+                    'type': response.type,
                     'photo_url': photo_url
                 }
             }), 200

@@ -49,5 +49,6 @@ class RecordCheckInUseCase:
             success=True,
             message="Check-in recorded successfully",
             timestamp=saved_check_in.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            location=f"{location.latitude}, {location.longitude}"
+            location=f"{location.latitude}, {location.longitude}",
+            type=saved_check_in.type.value
         )

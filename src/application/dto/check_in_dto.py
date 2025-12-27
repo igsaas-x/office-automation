@@ -17,3 +17,4 @@ class CheckInResponse:
     message: str
     timestamp: str
     location: str
+    type: str  # 'checkin' or 'checkout'
