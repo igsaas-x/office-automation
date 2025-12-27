@@ -23,11 +23,11 @@ def create_setup_wrappers(get_repositories_func):
 
     def build_setup_handler(include_group: bool = False):
         """Build a setup handler instance with necessary dependencies"""
-        session, _, _, _, group_repo, _, vehicle_repo, trip_repo, fuel_repo, _ = get_repositories_func()
+        session, _, _, _, group_repo, _, vehicle_repo, trip_repo, fuel_repo, telegram_user_repo = get_repositories_func()
         setup_handler = SetupHandler(
             RegisterVehicleUseCase(vehicle_repo),
             None,  # RegisterDriverUseCase - driver functionality removed
-            RegisterGroupUseCase(group_repo) if include_group else None,
+            RegisterGroupUseCase(group_repo, telegram_user_repo) if include_group else None,
             vehicle_repo,
             None,  # driver_repo - driver functionality removed
             DeleteVehicleUseCase(vehicle_repo, trip_repo, fuel_repo),
